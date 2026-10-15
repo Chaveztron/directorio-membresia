@@ -9,12 +9,12 @@ export const PUBLIC_CONTACTS = [
   {
     "id": "ruth-frinee-guerrero-gomez",
     "nombre": "Ruth Frinee Guerrero Gómez",
-    "imagen": null
+    "imagen": "contactos/ruth-frinee-ramirez.jpg"
   },
   {
     "id": "loida-elizabeth-reyes-puga",
     "nombre": "Loida Elizabeth Reyes Puga",
-    "imagen": null
+    "imagen": "contactos/ezequiel-loida.jpg"
   },
   {
     "id": "cynthia-davis-cortez",
@@ -24,22 +24,22 @@ export const PUBLIC_CONTACTS = [
   {
     "id": "cecilia-corrales-ramirez",
     "nombre": "Cecilia Corrales Ramírez",
-    "imagen": null
+    "imagen": "contactos/jorge-cecilia.jpg"
   },
   {
     "id": "naara-seled-cesena-resendiz",
     "nombre": "Naara Seled Ceseña Resendiz",
-    "imagen": null
+    "imagen": "contactos/naara-braulio.jpg"
   },
   {
     "id": "angelica-patricia-cabrera-aguilar",
     "nombre": "Angélica Patricia Cabrera Aguilar",
-    "imagen": null
+    "imagen": "contactos/alejandro-valle-angie.jpg"
   },
   {
     "id": "kenia-marlen-martinez-ponce",
     "nombre": "Kenia Marlen Martínez Ponce",
-    "imagen": null
+    "imagen": "contactos/kenia-marlen.jpg"
   },
   {
     "id": "cristhian-emanuel-rodriguez-trujillo",
@@ -49,32 +49,32 @@ export const PUBLIC_CONTACTS = [
   {
     "id": "daniel-alejandro-orozco-martinez",
     "nombre": "Daniel Alejandro Orozco Martínez",
-    "imagen": null
+    "imagen": "contactos/daniel-orozco.jpg"
   },
   {
     "id": "jesus-ariel-garcia-mejia",
     "nombre": "Jesús Ariel García Mejía",
-    "imagen": null
+    "imagen": "contactos/jesus-ariel.jpg"
   },
   {
     "id": "alejandro-ramirez-gomez",
     "nombre": "Alejandro Ramírez Gómez",
-    "imagen": null
+     "imagen": "contactos/ruth-frinee-ramirez.jpg"
   },
   {
     "id": "ezequiel-alberto-brizuela",
     "nombre": "Ezequiel Alberto Brizuela",
-    "imagen": null
+    "imagen": "contactos/ezequiel-loida.jpg"
   },
   {
     "id": "samuel-owen-crayne",
     "nombre": "Samuel Owen Crayne",
-    "imagen": null
+    "imagen": "contactos/samuel-masha.jpg"
   },
   {
     "id": "braulio-hernandez-hernandez",
     "nombre": "Braulio Hernández Hernández",
-    "imagen": null
+    "imagen": "contactos/naara-braulio.jpg"
   },
   {
     "id": "benjamin-davis",
@@ -84,42 +84,42 @@ export const PUBLIC_CONTACTS = [
   {
     "id": "david-samuel-perez-garcia",
     "nombre": "David Samuel Pérez García",
-    "imagen": null
+    "imagen": "contactos/david-perezoso.jpg"
   },
   {
     "id": "angel-david-sanchez-gerardo",
     "nombre": "Ángel David Sánchez Gerardo",
-    "imagen": null
+    "imagen": "contactos/angel-nadia.jpg"
   },
   {
     "id": "jonathan-flores-saldivar",
     "nombre": "Jonathan Flores Saldívar",
-    "imagen": null
+    "imagen": "contactos/jonathan-flores.jpg"
   },
   {
     "id": "jorge-luis-castillo-palacio",
     "nombre": "Jorge Luis Castillo Palacio",
-    "imagen": null
+    "imagen": "contactos/jorge-cecilia.jpg"
   },
   {
     "id": "baltazar-arzate-murguia",
     "nombre": "Baltazar Arzate Murguía",
-    "imagen": null
+    "imagen": "contactos/alejandra-baltazar.jpg"
   },
   {
     "id": "nadia-karina-ramos-robles",
     "nombre": "Nadia Karina Ramos Robles",
-    "imagen": null
+    "imagen": "contactos/angel-nadia.jpg"
   },
   {
     "id": "hanaeel-banda-guillen",
     "nombre": "Hanaeel Banda Guillén",
-    "imagen": null
+    "imagen": "contactos/Hanaeel.jpg"
   },
   {
     "id": "rebecca-hughes",
     "nombre": "Rebecca Hughes",
-    "imagen": null
+    "imagen": "contactos/rebecca-hughes.jpg"
   },
   {
     "id": "jackie-decherd",
@@ -129,32 +129,32 @@ export const PUBLIC_CONTACTS = [
   {
     "id": "masha-crayne",
     "nombre": "Masha Crayne",
-    "imagen": null
+    "imagen": "contactos/samuel-masha.jpg"
   },
   {
     "id": "maria-luisa",
     "nombre": "Maria Luisa",
-    "imagen": null
+    "imagen": "contactos/maria-luisa.jpg"
   },
   {
     "id": "alejandra-arzate",
     "nombre": "Alejandra Arzate",
-    "imagen": null
+    "imagen": "contactos/alejandra-baltazar.jpg"
   },
   {
     "id": "ashley",
     "nombre": "Ashley",
-    "imagen": null
+    "imagen": "contactos/ashley.jpg"
   },
   {
     "id": "genaro-alejandro-valle-coronel",
     "nombre": "Genaro Alejandro Valle Coronel",
-    "imagen": null
+    "imagen": "contactos/alejandro-valle-angie.jpg"
   },
   {
     "id": "jesus-chavez-caro",
     "nombre": "Jesús Chavez Caro",
-    "imagen": null
+    "imagen": "contactos/xd.jpg"
   }
 ] as const;
 
