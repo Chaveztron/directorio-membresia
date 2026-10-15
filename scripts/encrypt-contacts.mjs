@@ -27,9 +27,21 @@ for (const contact of contacts) {
       throw new Error(`Falta el campo ${field} en el contacto ${contact.id ?? "sin id"}.`);
     }
   }
+
+  if (
+    "imagen" in contact
+    && contact.imagen !== null
+    && typeof contact.imagen !== "string"
+  ) {
+    throw new Error(`El campo imagen debe ser texto o null en el contacto ${contact.id}.`);
+  }
 }
 
-const publicContacts = contacts.map(({ id, nombre }) => ({ id, nombre }));
+const publicContacts = contacts.map(({ id, nombre, imagen }) => ({
+  id,
+  nombre,
+  imagen: typeof imagen === "string" && imagen.trim() ? imagen.trim() : null,
+}));
 const privateDirectory = Object.fromEntries(
   contacts.map((contact) => [
     contact.id,

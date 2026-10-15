@@ -246,13 +246,10 @@ export default function Home() {
 
                   <div className="card-body gap-0 p-0">
                     <div className="flex items-center gap-3.5 border-b border-base-300 bg-gradient-to-br from-white to-sky-50/80 px-5 py-4">
-                      <div className="avatar placeholder">
-                        <div className="grid size-12 place-items-center rounded-xl bg-primary text-primary-content shadow-[0_7px_16px_rgba(19,90,122,0.18)]">
-                          <span className="text-sm font-bold">
-                            {initials(contact.nombre)}
-                          </span>
-                        </div>
-                      </div>
+                      <ContactAvatar
+                        image={contact.imagen}
+                        name={contact.nombre}
+                      />
 
                       <div className="min-w-0 flex-1">
                         <h2 className="truncate text-lg font-bold tracking-tight text-base-content">
@@ -404,6 +401,35 @@ export default function Home() {
         </DialogContent>
       </Dialog>
     </main>
+  );
+}
+
+function ContactAvatar({ name, image }: {
+  name: string;
+  image: string | null;
+}) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const showImage = Boolean(image) && !imageFailed;
+
+  return (
+    <div className="avatar placeholder shrink-0">
+      <div className="contact-card__avatar grid size-16 place-items-center overflow-hidden rounded-2xl border border-primary/15 bg-primary text-primary-content">
+        {showImage ? (
+          <img
+            src={image ?? undefined}
+            alt={`Fotografía de ${name}`}
+            className="size-full object-cover"
+            loading="lazy"
+            decoding="async"
+            onError={() => setImageFailed(true)}
+          />
+        ) : (
+          <span className="text-base font-bold">
+            {initials(name)}
+          </span>
+        )}
+      </div>
+    </div>
   );
 }
 

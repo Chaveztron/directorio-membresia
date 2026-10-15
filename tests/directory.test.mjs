@@ -9,9 +9,13 @@ test("renders the searchable locked directory", async () => {
   assert.match(html, /<title>Directorio de miembros<\/title>/);
   assert.match(html, /Buscar contacto por nombre/);
   assert.match(html, /Ver información sensible/);
-  assert.match(html, /Ana Martínez López/);
-  assert.doesNotMatch(html, /Av\. de los Olivos/);
-  assert.doesNotMatch(html, /664 555 0142/);
+  assert.match(html, /Cristhian Emanuel Rodríguez Trujillo/);
+  assert.match(
+    html,
+    /src="contactos\/cristhian-emanuel-rodriguez-trujillo\.png"/,
+  );
+  assert.doesNotMatch(html, /Donato Guerra 111/);
+  assert.doesNotMatch(html, /664 224 9920/);
 });
 
 test("includes DaisyUI component styles", async () => {
@@ -30,6 +34,6 @@ test("stores sensitive contact data as ciphertext", async () => {
   const source = await readFile(new URL("../app/directory-data.ts", import.meta.url), "utf8");
 
   assert.match(source, /ciphertext/);
-  assert.doesNotMatch(source, /Av\. de los Olivos/);
-  assert.doesNotMatch(source, /664 555 0142/);
+  assert.doesNotMatch(source, /Donato Guerra 111/);
+  assert.doesNotMatch(source, /664 224 9920/);
 });
