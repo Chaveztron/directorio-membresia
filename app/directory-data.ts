@@ -19,7 +19,7 @@ export const PUBLIC_CONTACTS = [
   {
     "id": "cynthia-davis-cortez",
     "nombre": "Cynthia Davis Cortez",
-    "imagen": null
+    "imagen": "contactos/benjamin-davis.jpg"
   },
   {
     "id": "cecilia-corrales-ramirez",
@@ -79,7 +79,7 @@ export const PUBLIC_CONTACTS = [
   {
     "id": "benjamin-davis",
     "nombre": "Benjamín Davis",
-    "imagen": null
+    "imagen": "contactos/benjamin-davis.jpg"
   },
   {
     "id": "david-samuel-perez-garcia",
