@@ -2,6 +2,7 @@
 
 import {
   BookHeart,
+  Eye,
   KeyRound,
   ListPlus,
   LogIn,
@@ -105,6 +106,7 @@ export function PrayerManagerDialog({
   onPrayersChange,
 }: PrayerManagerDialogProps) {
   const [adminPassword, setAdminPassword] = useState("");
+  const [showLogin, setShowLogin] = useState(mode === "add");
   const [drafts, setDrafts] = useState<PrayerDraft[]>(() =>
     createDrafts(contact, prayers, mode, session)
   );
@@ -190,7 +192,6 @@ export function PrayerManagerDialog({
 
     if (Date.now() >= session.expiresAt - 30_000) {
       onSessionChange(null);
-      onPrayersChange(null);
       setError("La sesión administrativa venció. Inicia sesión nuevamente.");
       return;
     }
@@ -233,7 +234,6 @@ export function PrayerManagerDialog({
 
       if (/sesión administrativa venció/i.test(message)) {
         onSessionChange(null);
-        onPrayersChange(null);
       }
     } finally {
       setIsWorking(false);
@@ -242,7 +242,6 @@ export function PrayerManagerDialog({
 
   function logout() {
     onSessionChange(null);
-    onPrayersChange(null);
     setDrafts([]);
     setDeletedIds([]);
     setSuccess("");
@@ -254,7 +253,7 @@ export function PrayerManagerDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-hidden rounded-2xl border-base-300 bg-base-100 p-0 shadow-2xl sm:max-w-2xl">
-        {!session ? (
+        {!session && showLogin ? (
           <form onSubmit={login}>
             <DialogHeader className="border-b border-base-300 p-5 pb-4">
               <div className="mb-1 grid size-11 place-items-center rounded-2xl bg-primary/10 text-primary">
@@ -262,7 +261,7 @@ export function PrayerManagerDialog({
               </div>
               <DialogTitle className="text-xl">Acceso administrativo</DialogTitle>
               <DialogDescription className="text-base-content/60">
-                Inicia sesión para consultar y administrar las oraciones de {contact?.nombre ?? "este contacto"}.
+                Inicia sesión para agregar, editar o eliminar las oraciones de {contact?.nombre ?? "este contacto"}.
               </DialogDescription>
             </DialogHeader>
 
@@ -314,6 +313,76 @@ export function PrayerManagerDialog({
               </Button>
             </DialogFooter>
           </form>
+        ) : !session ? (
+          <div className="flex max-h-[90vh] min-h-0 flex-col">
+            <DialogHeader className="shrink-0 border-b border-base-300 p-5 pb-4">
+              <div className="mb-2 flex items-center gap-2 text-primary">
+                <BookHeart aria-hidden="true" className="size-5" />
+                <span className="text-xs font-bold uppercase tracking-[0.08em]">
+                  Lista de oración
+                </span>
+              </div>
+              <DialogTitle className="text-xl">{title}</DialogTitle>
+              <DialogDescription className="mt-1 text-base-content/60">
+                Puedes consultar estas peticiones. Para agregar, editar o eliminar una oración se requiere acceso administrativo.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-5">
+              <div className="flex items-center gap-2 rounded-xl border border-primary/15 bg-primary/5 px-3 py-2 text-xs font-semibold text-primary">
+                <Eye aria-hidden="true" className="size-4 shrink-0" />
+                Modo de consulta · solo lectura
+              </div>
+
+              {prayers === null ? (
+                <div className="rounded-xl border border-dashed border-base-300 bg-base-200/40 px-5 py-8 text-center">
+                  <span className="loading loading-spinner loading-md text-primary" />
+                  <p className="mt-3 text-sm font-semibold">Cargando oraciones…</p>
+                </div>
+              ) : contactPrayers.length > 0 ? (
+                <div className="space-y-3">
+                  {contactPrayers.map((prayer, index) => (
+                    <article
+                      key={prayer.id}
+                      className="rounded-xl border border-base-300 bg-base-100 p-4 shadow-sm"
+                    >
+                      <p className="mb-2 text-xs font-bold text-base-content/55">
+                        Oración {index + 1} · {formatDate(prayer.createdAt)}
+                      </p>
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-base-content/85">
+                        {prayer.text}
+                      </p>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-base-300 bg-base-200/40 px-5 py-8 text-center">
+                  <BookHeart aria-hidden="true" className="mx-auto mb-2 size-7 text-base-content/30" />
+                  <p className="text-sm font-semibold">Este contacto todavía no tiene oraciones.</p>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter className="shrink-0 border-t border-base-300 bg-base-200/45 p-5 sm:justify-between">
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm h-9 min-h-9 rounded-lg px-4"
+                onClick={() => onOpenChange(false)}
+              >
+                Cerrar
+              </button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="btn btn-outline btn-sm h-9 min-h-9 rounded-lg px-4"
+                onClick={() => setShowLogin(true)}
+                disabled={!isPrayerStorageConfigured}
+              >
+                <KeyRound aria-hidden="true" />
+                Administrar oraciones
+              </Button>
+            </DialogFooter>
+          </div>
         ) : (
           <form onSubmit={saveChanges} className="flex max-h-[90vh] min-h-0 flex-col">
             <DialogHeader className="shrink-0 border-b border-base-300 p-5 pb-4">

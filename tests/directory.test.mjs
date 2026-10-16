@@ -37,3 +37,21 @@ test("stores sensitive contact data as ciphertext", async () => {
   assert.doesNotMatch(source, /Donato Guerra 111/);
   assert.doesNotMatch(source, /664 224 9920/);
 });
+
+test("allows prayer consultation without granting public write access", async () => {
+  const rules = await readFile(
+    new URL("../firestore.rules", import.meta.url),
+    "utf8",
+  );
+  const dialog = await readFile(
+    new URL("../components/prayer-manager-dialog.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(rules, /allow read:\s*if true;/);
+  assert.match(rules, /allow create:\s*if isPrayerAdmin\(\)/);
+  assert.match(rules, /allow update:\s*if isPrayerAdmin\(\)/);
+  assert.match(rules, /allow delete:\s*if isPrayerAdmin\(\)/);
+  assert.match(dialog, /Modo de consulta · solo lectura/);
+  assert.match(dialog, /Administrar oraciones/);
+});

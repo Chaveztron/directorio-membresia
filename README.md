@@ -77,7 +77,7 @@ La contraseña protege el contenido frente a accesos casuales porque los datos s
 
 ## Oraciones por contacto con Firebase
 
-GitHub Pages sigue alojando la interfaz, mientras Firebase Authentication y Cloud Firestore almacenan y protegen las oraciones. Solo la cuenta administrativa puede consultar, agregar, editar o eliminar registros.
+GitHub Pages sigue alojando la interfaz, mientras Firebase Authentication y Cloud Firestore almacenan las oraciones. Al desbloquear el directorio, cualquier visitante puede consultarlas en modo de solo lectura. Solo la cuenta administrativa puede agregar, editar o eliminar registros.
 
 ### 1. Crear Firebase y la cuenta administrativa
 
@@ -85,7 +85,7 @@ GitHub Pages sigue alojando la interfaz, mientras Firebase Authentication y Clou
 2. Abre **Firestore Database**, crea la base de datos y elige **modo producción**.
 3. Abre **Authentication → Sign-in method** y habilita **Correo electrónico/contraseña**.
 4. En **Authentication → Users**, crea una sola cuenta administrativa y copia su **UID**.
-5. En `firestore.rules`, sustituye `REEMPLAZA_CON_UID_ADMIN` por ese UID.
+5. En `firestore.rules`, verifica que `isPrayerAdmin()` contenga el UID de esa cuenta.
 6. Copia el contenido completo de `firestore.rules` en **Firestore Database → Rules** y pulsa **Publish**.
 
 No uses la contraseña del directorio para esta cuenta. La contraseña administrativa debe ser diferente y solamente la debe conocer el administrador.
@@ -115,7 +115,10 @@ Después haz `git push`. El flujo de GitHub Actions incluirá la configuración 
 ### Funcionamiento
 
 - Los botones de oraciones solo aparecen cuando la información del directorio está desbloqueada.
-- **Agregar oración** solicita la contraseña administrativa si todavía no hay una sesión activa.
-- Después de ingresar, cada tarjeta con registros muestra **Ver oraciones (n)**.
+- Cada tarjeta con registros muestra **Ver oraciones (n)** sin solicitar la contraseña administrativa.
+- La ventana de consulta no permite modificar ni eliminar las peticiones.
+- **Agregar oración** y **Administrar oraciones** solicitan la contraseña administrativa si todavía no hay una sesión activa.
 - El formulario permite agregar varios renglones, consultar, editar y marcar registros para eliminación antes de pulsar **Guardar cambios**.
 - Al ocultar nuevamente la información del directorio también se cierra la sesión administrativa.
+
+> Importante: las reglas permiten leer la colección `prayers` sin autenticación para ofrecer esta consulta. La interfaz solo muestra el botón después de desbloquear el directorio, pero los textos deben considerarse información públicamente legible desde la API de Firestore. No almacenes peticiones confidenciales con esta modalidad.

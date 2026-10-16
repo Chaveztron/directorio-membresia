@@ -157,7 +157,7 @@ function authHeaders(idToken: string) {
   };
 }
 
-export async function listPrayers(idToken: string): Promise<Prayer[]> {
+export async function listPrayers(idToken?: string): Promise<Prayer[]> {
   requireConfiguration();
 
   const prayers: Prayer[] = [];
@@ -172,7 +172,11 @@ export async function listPrayers(idToken: string): Promise<Prayer[]> {
 
     const payload = await firebaseRequest(
       `${firestoreBaseUrl()}/prayers?${parameters.toString()}`,
-      { headers: authHeaders(idToken) },
+      {
+        headers: idToken
+          ? authHeaders(idToken)
+          : { "Content-Type": "application/json" },
+      },
       "No fue posible cargar las oraciones.",
     ) as {
       documents?: FirestoreDocument[];

@@ -17,7 +17,7 @@ import {
   UserRound,
   UsersRound,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,10 @@ import {
   ENCRYPTED_DIRECTORY,
   PUBLIC_CONTACTS,
 } from "@/app/directory-data";
+import {
+  isPrayerStorageConfigured,
+  listPrayers,
+} from "@/lib/prayers";
 import type { Prayer, PrayerAdminSession } from "@/lib/prayers";
 
 type SensitiveInfo = {
@@ -119,6 +123,7 @@ export default function Home() {
   const [prayerSession, setPrayerSession] =
     useState<PrayerAdminSession | null>(null);
   const [prayers, setPrayers] = useState<Prayer[] | null>(null);
+  const [prayerLoadError, setPrayerLoadError] = useState("");
   const [prayerDialog, setPrayerDialog] =
     useState<PrayerDialogState | null>(null);
 
@@ -132,6 +137,31 @@ export default function Home() {
 
   const isUnlocked = sensitiveDirectory !== null;
 
+  useEffect(() => {
+    if (!isUnlocked || !isPrayerStorageConfigured) return;
+
+    let cancelled = false;
+    setPrayerLoadError("");
+
+    void listPrayers()
+      .then((nextPrayers) => {
+        if (!cancelled) setPrayers(nextPrayers);
+      })
+      .catch((reason) => {
+        if (cancelled) return;
+        setPrayers([]);
+        setPrayerLoadError(
+          reason instanceof Error
+            ? reason.message
+            : "No fue posible cargar las oraciones.",
+        );
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isUnlocked]);
+
   const prayerCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const prayer of prayers ?? []) {
@@ -144,6 +174,7 @@ export default function Home() {
     setSensitiveDirectory(null);
     setPrayerSession(null);
     setPrayers(null);
+    setPrayerLoadError("");
     setPrayerDialog(null);
     setPassword("");
     setUnlockError("");
@@ -262,6 +293,14 @@ export default function Home() {
                 </span>
               </span>
           </div>
+          {isUnlocked && prayerLoadError && (
+            <p
+              className="mt-2 rounded-xl border border-error/20 bg-error/5 px-3 py-2 text-sm font-medium text-error"
+              role="alert"
+            >
+              {prayerLoadError}
+            </p>
+          )}
         </section>
 
         {filteredContacts.length > 0 ? (

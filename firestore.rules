@@ -2,8 +2,7 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Sustituye este valor con el UID de la cuenta administrativa creada
-    // en Firebase Authentication antes de publicar estas reglas.
+    // UID de la única cuenta autorizada para modificar las oraciones.
     function isPrayerAdmin() {
       return request.auth != null
         && request.auth.uid == "wGpQj6f5jUV9X0xRfz8D7mEYSbO2";
@@ -27,7 +26,9 @@ service cloud.firestore {
     }
 
     match /prayers/{prayerId} {
-      allow read: if isPrayerAdmin();
+      // La interfaz muestra estas lecturas después de desbloquear el directorio.
+      // Solo la cuenta administrativa puede crear, editar o eliminar registros.
+      allow read: if true;
       allow create: if isPrayerAdmin() && hasValidPrayerFields();
       allow update: if isPrayerAdmin()
         && hasValidPrayerFields()
