@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  BookHeart,
   BriefcaseBusiness,
   CalendarDays,
   Church,
@@ -8,6 +9,7 @@ import {
   EyeOff,
   HeartHandshake,
   LockKeyhole,
+  ListPlus,
   MapPin,
   Phone,
   Search,
@@ -19,6 +21,7 @@ import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
+import { PrayerManagerDialog } from "@/components/prayer-manager-dialog";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +35,7 @@ import {
   ENCRYPTED_DIRECTORY,
   PUBLIC_CONTACTS,
 } from "@/app/directory-data";
+import type { Prayer, PrayerAdminSession } from "@/lib/prayers";
 
 type SensitiveInfo = {
   fechaNacimiento: string;
@@ -44,6 +48,14 @@ type SensitiveInfo = {
 };
 
 type SensitiveDirectory = Record<string, SensitiveInfo>;
+
+type PrayerDialogState = {
+  contact: {
+    id: string;
+    nombre: string;
+  };
+  mode: "view" | "add";
+};
 
 function fromBase64(value: string) {
   const binary = window.atob(value);
@@ -104,6 +116,11 @@ export default function Home() {
   const [unlockError, setUnlockError] = useState("");
   const [sensitiveDirectory, setSensitiveDirectory] =
     useState<SensitiveDirectory | null>(null);
+  const [prayerSession, setPrayerSession] =
+    useState<PrayerAdminSession | null>(null);
+  const [prayers, setPrayers] = useState<Prayer[] | null>(null);
+  const [prayerDialog, setPrayerDialog] =
+    useState<PrayerDialogState | null>(null);
 
   const filteredContacts = useMemo(() => {
     const normalizedQuery = normalize(query);
@@ -115,10 +132,28 @@ export default function Home() {
 
   const isUnlocked = sensitiveDirectory !== null;
 
+  const prayerCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const prayer of prayers ?? []) {
+      counts[prayer.contactId] = (counts[prayer.contactId] ?? 0) + 1;
+    }
+    return counts;
+  }, [prayers]);
+
   function lockDirectory() {
     setSensitiveDirectory(null);
+    setPrayerSession(null);
+    setPrayers(null);
+    setPrayerDialog(null);
     setPassword("");
     setUnlockError("");
+  }
+
+  function openPrayerDialog(
+    contact: { id: string; nombre: string },
+    mode: "view" | "add",
+  ) {
+    setPrayerDialog({ contact, mode });
   }
 
   async function unlockDirectory(event: FormEvent<HTMLFormElement>) {
@@ -283,6 +318,13 @@ export default function Home() {
                           />
                         </div>
 
+                        <PrayerActions
+                          count={prayerCounts[contact.id] ?? 0}
+                          countsLoaded={prayers !== null}
+                          onView={() => openPrayerDialog(contact, "view")}
+                          onAdd={() => openPrayerDialog(contact, "add")}
+                        />
+
                         <div className="my-4 h-px bg-base-300" />
 
                         <div className="space-y-4">
@@ -400,7 +442,59 @@ export default function Home() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <PrayerManagerDialog
+        key={`${prayerDialog?.contact.id ?? "closed"}-${prayerDialog?.mode ?? "add"}-${prayerSession?.uid ?? "guest"}`}
+        open={prayerDialog !== null}
+        mode={prayerDialog?.mode ?? "add"}
+        contact={prayerDialog?.contact ?? null}
+        session={prayerSession}
+        prayers={prayers}
+        onOpenChange={(open) => {
+          if (!open) setPrayerDialog(null);
+        }}
+        onSessionChange={setPrayerSession}
+        onPrayersChange={setPrayers}
+      />
     </main>
+  );
+}
+
+function PrayerActions({
+  count,
+  countsLoaded,
+  onView,
+  onAdd,
+}: {
+  count: number;
+  countsLoaded: boolean;
+  onView: () => void;
+  onAdd: () => void;
+}) {
+  return (
+    <div className="mt-3 flex flex-wrap gap-2 border-t border-base-300/70 pt-3">
+      {countsLoaded && count > 0 && (
+        <Button
+          type="button"
+          variant="ghost"
+          className="btn btn-outline btn-sm h-9 min-h-9 flex-1 rounded-xl border-primary/25 px-3 text-primary"
+          onClick={onView}
+        >
+          <BookHeart aria-hidden="true" className="size-4" />
+          Ver oraciones ({count})
+        </Button>
+      )}
+
+      <Button
+        type="button"
+        variant="ghost"
+        className="btn btn-primary btn-sm h-9 min-h-9 flex-1 rounded-xl px-3 shadow-sm"
+        onClick={onAdd}
+      >
+        <ListPlus aria-hidden="true" className="size-4" />
+        Agregar oración
+      </Button>
+    </div>
   );
 }
 

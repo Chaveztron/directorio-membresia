@@ -29,6 +29,10 @@ jobs:
       - run: npm ci
       - name: Compilar sitio
         run: npm run build
+        env:
+          VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_ADMIN_EMAIL: ${{ vars.VITE_FIREBASE_ADMIN_EMAIL }}
       - name: Preparar rutas de GitHub Pages
         run: node scripts/prepare-github-pages.mjs "/${{ github.event.repository.name }}"
       - uses: actions/configure-pages@v5
