@@ -321,7 +321,7 @@ export default function Home() {
                   <div className="card-body gap-0 p-0">
                     <div className="flex items-center gap-3.5 border-b border-base-300 bg-gradient-to-br from-white to-sky-50/80 px-5 py-4">
                       <ContactAvatar
-                        image={contact.imagen}
+                        image={details ? contact.imagen : null}
                         name={contact.nombre}
                       />
 

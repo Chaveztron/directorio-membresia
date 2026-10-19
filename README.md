@@ -50,7 +50,9 @@ El nombre se conserva sin cifrar para que el buscador funcione antes de desbloqu
 
 3. Ejecuta nuevamente `npm run encrypt:contacts -- contacts.private.json`.
 
-Si el campo `imagen` no existe, está vacío o el archivo no carga, la tarjeta muestra automáticamente las iniciales. Las fotografías se publican sin cifrar para que puedan mostrarse antes de desbloquear el directorio.
+Mientras el directorio está bloqueado, las tarjetas muestran únicamente las iniciales. Las fotografías aparecen después de ingresar correctamente la contraseña. Si el campo `imagen` no existe, está vacío o el archivo no carga, la tarjeta también muestra las iniciales.
+
+> **Importante:** este comportamiento oculta las fotografías en la interfaz, pero no cifra los archivos. Todo archivo guardado en `public/contactos/` se publica en GitHub Pages y podría abrirse directamente si alguien conoce su dirección. Para proteger también los archivos originales sería necesario cifrarlos o servirlos desde un almacenamiento privado con autorización.
 
 ## Publicar en GitHub Pages
 

@@ -10,12 +10,21 @@ test("renders the searchable locked directory", async () => {
   assert.match(html, /Buscar contacto por nombre/);
   assert.match(html, /Ver información sensible/);
   assert.match(html, /Cristhian Emanuel Rodríguez Trujillo/);
-  assert.match(
+  assert.doesNotMatch(
     html,
     /src="contactos\/cristhian-emanuel-rodriguez-trujillo\.png"/,
   );
   assert.doesNotMatch(html, /Donato Guerra 111/);
   assert.doesNotMatch(html, /664 224 9920/);
+});
+
+test("keeps contact photos hidden until the directory is unlocked", async () => {
+  const source = await readFile(
+    new URL("../app/page.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /image=\{details \? contact\.imagen : null\}/);
 });
 
 test("includes DaisyUI component styles", async () => {
