@@ -7,6 +7,10 @@ const outputPath = path.resolve("app/directory-data.ts");
 const password = process.env.CONTACTS_PASSWORD;
 const iterations = 250_000;
 
+function firstName(name) {
+  return name.trim().split(/\s+/)[0] ?? name.trim();
+}
+
 if (!password || password.length < 12) {
   throw new Error("Define CONTACTS_PASSWORD con una contraseña de al menos 12 caracteres.");
 }
@@ -39,13 +43,14 @@ for (const contact of contacts) {
 
 const publicContacts = contacts.map(({ id, nombre, imagen }) => ({
   id,
-  nombre,
+  nombre: firstName(nombre),
   imagen: typeof imagen === "string" && imagen.trim() ? imagen.trim() : null,
 }));
 const privateDirectory = Object.fromEntries(
   contacts.map((contact) => [
     contact.id,
     {
+      nombreCompleto: contact.nombre.trim(),
       fechaNacimiento: contact.fechaNacimiento,
       direccion: contact.direccion,
       telefono: contact.telefono,

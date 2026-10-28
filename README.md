@@ -33,7 +33,11 @@ CONTACTS_PASSWORD='TU-CONTRASEÑA-LARGA' npm run encrypt:contacts -- contacts.pr
 
 4. Publica el proyecto. `contacts.private.json` está excluido de Git y no debe subirse.
 
-El nombre se conserva sin cifrar para que el buscador funcione antes de desbloquear el directorio. Los demás campos se publican únicamente dentro del bloque cifrado.
+Antes de desbloquear, el directorio publica y muestra únicamente el primer nombre. El nombre completo se guarda dentro del bloque cifrado junto con los demás datos sensibles. Mientras el directorio está bloqueado, el buscador consulta solo el primer nombre; después de ingresar la contraseña también permite buscar por el nombre completo.
+
+Después de instalar una actualización que cambie la estructura de los datos cifrados, vuelve a ejecutar `npm run encrypt:contacts -- contacts.private.json` antes de publicar. Esto es necesario para trasladar los nombres completos al bloque cifrado.
+
+> **Nota de privacidad:** si los valores de `id` o los nombres de las fotografías contienen apellidos —por ejemplo, `cristhian-emanuel-rodriguez-trujillo`— esos textos continúan formando parte de las rutas públicas. Cambiarlos por identificadores neutros requiere migrar también las fotografías y las oraciones asociadas; no se realiza automáticamente para evitar perder sus relaciones actuales.
 
 ## Agregar fotografías a los contactos
 

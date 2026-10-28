@@ -9,7 +9,11 @@ test("renders the searchable locked directory", async () => {
   assert.match(html, /<title>Directorio de miembros<\/title>/);
   assert.match(html, /Buscar contacto por nombre/);
   assert.match(html, /Ver información sensible/);
-  assert.match(html, /Cristhian Emanuel Rodríguez Trujillo/);
+  assert.match(html, /<h2[^>]*>\s*Cristhian\s*<\/h2>/);
+  assert.doesNotMatch(
+    html,
+    /<h2[^>]*>\s*Cristhian Emanuel Rodríguez Trujillo\s*<\/h2>/,
+  );
   assert.doesNotMatch(
     html,
     /src="contactos\/cristhian-emanuel-rodriguez-trujillo\.png"/,
@@ -25,6 +29,22 @@ test("keeps contact photos hidden until the directory is unlocked", async () => 
   );
 
   assert.match(source, /image=\{details \? contact\.imagen : null\}/);
+});
+
+test("publishes first names and encrypts full names on regeneration", async () => {
+  const generator = await readFile(
+    new URL("../scripts/encrypt-contacts.mjs", import.meta.url),
+    "utf8",
+  );
+  const page = await readFile(
+    new URL("../app/page.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(generator, /nombre: firstName\(nombre\)/);
+  assert.match(generator, /nombreCompleto: contact\.nombre\.trim\(\)/);
+  assert.match(page, /details\?\.nombreCompleto/);
+  assert.match(page, /firstName\(contact\.nombre\)/);
 });
 
 test("includes DaisyUI component styles", async () => {

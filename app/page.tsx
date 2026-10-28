@@ -42,6 +42,7 @@ import {
 import type { Prayer, PrayerAdminSession } from "@/lib/prayers";
 
 type SensitiveInfo = {
+  nombreCompleto?: string;
   fechaNacimiento: string;
   direccion: string;
   telefono: string;
@@ -103,6 +104,10 @@ function normalize(value: string) {
     .trim();
 }
 
+function firstName(name: string) {
+  return name.trim().split(/\s+/)[0] ?? name.trim();
+}
+
 function initials(name: string) {
   return name
     .split(" ")
@@ -130,10 +135,15 @@ export default function Home() {
   const filteredContacts = useMemo(() => {
     const normalizedQuery = normalize(query);
     if (!normalizedQuery) return PUBLIC_CONTACTS;
-    return PUBLIC_CONTACTS.filter((contact) =>
-      normalize(contact.nombre).includes(normalizedQuery),
-    );
-  }, [query]);
+    return PUBLIC_CONTACTS.filter((contact) => {
+      const fullName = sensitiveDirectory?.[contact.id]?.nombreCompleto;
+      const searchableName = sensitiveDirectory
+        ? (fullName ?? contact.nombre)
+        : firstName(contact.nombre);
+
+      return normalize(searchableName).includes(normalizedQuery);
+    });
+  }, [query, sensitiveDirectory]);
 
   const isUnlocked = sensitiveDirectory !== null;
 
@@ -310,6 +320,8 @@ export default function Home() {
           >
             {filteredContacts.map((contact) => {
               const details = sensitiveDirectory?.[contact.id];
+              const displayName = details?.nombreCompleto
+                ?? (details ? contact.nombre : firstName(contact.nombre));
 
               return (
                 <article
@@ -322,12 +334,12 @@ export default function Home() {
                     <div className="flex items-center gap-3.5 border-b border-base-300 bg-gradient-to-br from-white to-sky-50/80 px-5 py-4">
                       <ContactAvatar
                         image={details ? contact.imagen : null}
-                        name={contact.nombre}
+                        name={displayName}
                       />
 
                       <div className="min-w-0 flex-1">
                         <h2 className="truncate text-lg font-bold tracking-tight text-base-content">
-                          {contact.nombre}
+                          {displayName}
                         </h2>
                         <p className="mt-0.5 text-xs font-medium text-base-content/50">
                           Miembro del directorio
@@ -360,8 +372,14 @@ export default function Home() {
                         <PrayerActions
                           count={prayerCounts[contact.id] ?? 0}
                           countsLoaded={prayers !== null}
-                          onView={() => openPrayerDialog(contact, "view")}
-                          onAdd={() => openPrayerDialog(contact, "add")}
+                          onView={() => openPrayerDialog({
+                            id: contact.id,
+                            nombre: displayName,
+                          }, "view")}
+                          onAdd={() => openPrayerDialog({
+                            id: contact.id,
+                            nombre: displayName,
+                          }, "add")}
                         />
 
                         <div className="my-4 h-px bg-base-300" />
