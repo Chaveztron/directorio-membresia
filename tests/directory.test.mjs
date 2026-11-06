@@ -3,16 +3,18 @@ import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 
-test("renders the searchable locked directory", async () => {
+test("renders only the member count while the directory is locked", async () => {
   const html = await readFile(new URL("../dist/client/index.html", import.meta.url), "utf8");
 
   assert.match(html, /<title>Directorio de miembros<\/title>/);
-  assert.match(html, /Buscar contacto por nombre/);
-  assert.match(html, /Ver información sensible/);
-  assert.match(html, /<h2[^>]*>\s*Cristhian\s*<\/h2>/);
+  assert.match(html, /Directorio protegido/);
+  assert.match(html, /32 miembros/);
+  assert.match(html, /placeholder="Contraseña"/);
+  assert.doesNotMatch(html, /Buscar contacto por nombre/);
+  assert.doesNotMatch(html, /Lista de contactos/);
   assert.doesNotMatch(
     html,
-    /<h2[^>]*>\s*Cristhian Emanuel Rodríguez Trujillo\s*<\/h2>/,
+    /<h2[^>]*>\s*Cristhian\s*<\/h2>/,
   );
   assert.doesNotMatch(
     html,
@@ -20,6 +22,17 @@ test("renders the searchable locked directory", async () => {
   );
   assert.doesNotMatch(html, /Donato Guerra 111/);
   assert.doesNotMatch(html, /664 224 9920/);
+});
+
+test("reveals the complete directory only after unlocking", async () => {
+  const source = await readFile(
+    new URL("../app/page.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /if \(!isUnlocked\)/);
+  assert.match(source, /aria-label="Lista de contactos"/);
+  assert.match(source, /setSensitiveDirectory\(decrypted\)/);
 });
 
 test("keeps contact photos hidden until the directory is unlocked", async () => {

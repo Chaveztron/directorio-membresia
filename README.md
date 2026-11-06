@@ -2,6 +2,8 @@
 
 Página estática de contactos construida con Next.js, Tailwind CSS y DaisyUI. Incluye búsqueda por nombre y cifra los datos sensibles con AES-256-GCM antes de publicarlos.
 
+Mientras el directorio está bloqueado, la página muestra únicamente la cantidad total de miembros y el campo de contraseña. Los nombres, el buscador, las fotografías y las tarjetas aparecen solamente después de desbloquear la información.
+
 ## Probar el ejemplo
 
 ```bash

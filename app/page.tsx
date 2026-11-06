@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowRight,
   BookHeart,
   BriefcaseBusiness,
   CalendarDays,
@@ -22,14 +23,6 @@ import type { FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { PrayerManagerDialog } from "@/components/prayer-manager-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   ENCRYPTED_DIRECTORY,
@@ -119,7 +112,6 @@ function initials(name: string) {
 
 export default function Home() {
   const [query, setQuery] = useState("");
-  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [password, setPassword] = useState("");
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [unlockError, setUnlockError] = useState("");
@@ -182,6 +174,7 @@ export default function Home() {
 
   function lockDirectory() {
     setSensitiveDirectory(null);
+    setQuery("");
     setPrayerSession(null);
     setPrayers(null);
     setPrayerLoadError("");
@@ -207,12 +200,87 @@ export default function Home() {
       const decrypted = await decryptDirectory(password);
       setSensitiveDirectory(decrypted);
       setPassword("");
-      setPasswordDialogOpen(false);
     } catch {
       setUnlockError("La contraseña no es correcta. Inténtalo nuevamente.");
     } finally {
       setIsUnlocking(false);
     }
+  }
+
+  if (!isUnlocked) {
+    return (
+      <main className="directory-page min-h-screen text-base-content">
+        <div className="mx-auto flex min-h-screen w-full max-w-xl items-center justify-center px-4 py-12">
+          <section
+            aria-labelledby="locked-directory-title"
+            className="w-full max-w-md rounded-3xl border border-base-300 bg-base-100/90 px-6 py-10 text-center shadow-[0_24px_70px_rgba(23,32,51,0.12)] backdrop-blur sm:px-10 sm:py-12"
+          >
+            <div className="mx-auto grid size-16 place-items-center rounded-full border border-primary/20 bg-primary/8 text-primary shadow-sm">
+              <LockKeyhole aria-hidden="true" className="size-7" />
+            </div>
+
+            <h1
+              id="locked-directory-title"
+              className="mt-5 text-xl font-bold tracking-tight"
+            >
+              Directorio protegido
+            </h1>
+            <p className="mt-1 text-3xl font-bold text-primary">
+              {`${PUBLIC_CONTACTS.length} miembros`}
+            </p>
+            <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-base-content/55">
+              Ingresa la contraseña para consultar el directorio completo.
+            </p>
+
+            <form className="mt-7" onSubmit={unlockDirectory}>
+              <label className="sr-only" htmlFor="directory-password">
+                Contraseña
+              </label>
+              <div className="flex h-12 items-center overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-sm focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10">
+                <Input
+                  id="directory-password"
+                  type="password"
+                  value={password}
+                  onChange={(event) => {
+                    setPassword(event.target.value);
+                    if (unlockError) setUnlockError("");
+                  }}
+                  autoComplete="current-password"
+                  autoFocus
+                  aria-invalid={Boolean(unlockError)}
+                  aria-describedby={unlockError ? "password-error" : undefined}
+                  className="h-full min-w-0 flex-1 border-0 bg-transparent px-4 text-sm shadow-none outline-none focus-visible:border-0 focus-visible:ring-0"
+                  placeholder="Contraseña"
+                />
+                <Button
+                  type="submit"
+                  variant="ghost"
+                  aria-label="Desbloquear directorio"
+                  className="btn btn-ghost h-full min-h-0 rounded-none border-l border-base-300 px-4 text-primary hover:bg-primary/8"
+                  disabled={isUnlocking || !password.trim()}
+                >
+                  {isUnlocking ? (
+                    <span className="loading loading-spinner loading-sm" />
+                  ) : (
+                    <ArrowRight aria-hidden="true" className="size-5" />
+                  )}
+                </Button>
+              </div>
+
+              {unlockError && (
+                <p
+                  id="password-error"
+                  className="mt-3 text-sm font-medium text-error"
+                  role="alert"
+                >
+                  {unlockError}
+                </p>
+              )}
+            </form>
+          </section>
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -238,22 +306,10 @@ export default function Home() {
             <Button
               type="button"
               variant="ghost"
-                className={`btn btn-sm h-9 min-h-9 rounded-lg px-3.5 text-sm shadow-sm ${
-                  isUnlocked ? "btn-outline btn-error" : "btn-primary"
-                }`}
-              onClick={() =>
-                isUnlocked ? lockDirectory() : setPasswordDialogOpen(true)
-              }
+              className="btn btn-outline btn-error btn-sm h-9 min-h-9 rounded-lg px-3.5 text-sm shadow-sm"
+              onClick={lockDirectory}
             >
-              {isUnlocked ? (
-                <>
-                  <EyeOff aria-hidden="true" /> Ocultar información
-                </>
-              ) : (
-                <>
-                  <LockKeyhole aria-hidden="true" /> Ver información sensible
-                </>
-              )}
+              <EyeOff aria-hidden="true" /> Ocultar información
             </Button>
           </div>
         </header>
@@ -286,21 +342,10 @@ export default function Home() {
               <span
                 role="status"
                 aria-live="polite"
-                className={`directory-status ${
-                  isUnlocked
-                    ? "directory-status--visible"
-                    : "directory-status--locked"
-                }`}
+                className="directory-status directory-status--visible"
               >
-                {isUnlocked ? (
-                  <Eye aria-hidden="true" />
-                ) : (
-                  <LockKeyhole aria-hidden="true" />
-                )}
-
-                <span>
-                  {isUnlocked ? "Datos visibles" : "Datos protegidos"}
-                </span>
+                <Eye aria-hidden="true" />
+                <span>Datos visibles</span>
               </span>
           </div>
           {isUnlocked && prayerLoadError && (
@@ -410,16 +455,8 @@ export default function Home() {
                             className="mx-auto mb-2 size-5 text-base-content/35"
                           />
                           <p className="mb-3 text-sm text-base-content/60">
-                            La información está protegida.
+                            La información de este contacto no está disponible.
                           </p>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            className="btn btn-outline btn-xs h-8 min-h-8 rounded-lg px-3"
-                            onClick={() => setPasswordDialogOpen(true)}
-                          >
-                            Ver información
-                          </Button>
                         </div>
                       </div>
                     )}
@@ -438,67 +475,6 @@ export default function Home() {
           </section>
         )}
       </div>
-
-      <Dialog
-        open={passwordDialogOpen}
-        onOpenChange={(open) => {
-          setPasswordDialogOpen(open);
-          if (!open) {
-            setPassword("");
-            setUnlockError("");
-          }
-        }}
-      >
-        <DialogContent className="rounded-2xl border-base-300 bg-base-100 p-0 shadow-2xl sm:max-w-md">
-          <form onSubmit={unlockDirectory}>
-            <DialogHeader className="border-b border-base-300 p-5 pb-4">
-              <div className="mb-1 grid size-11 place-items-center rounded-2xl bg-primary/12 text-primary">
-                <LockKeyhole aria-hidden="true" className="size-5" />
-              </div>
-              <DialogTitle className="text-xl">Desbloquear información sensible</DialogTitle>
-              <DialogDescription className="text-base-content/60">
-                Ingresa la contraseña del directorio para ver los datos de los miembros.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-2 p-5">
-              <label htmlFor="directory-password" className="label font-semibold">Contraseña</label>
-              <Input
-                id="directory-password"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                autoComplete="current-password"
-                autoFocus
-                aria-invalid={Boolean(unlockError)}
-                aria-describedby={unlockError ? "password-error" : undefined}
-                className="input input-bordered h-10 w-full rounded-lg bg-base-100 px-3 text-sm focus:border-primary"
-                placeholder="Escribe la contraseña"
-              />
-              {unlockError && (
-                <p id="password-error" className="pt-1 text-sm font-medium text-error" role="alert">
-                  {unlockError}
-                </p>
-              )}
-            </div>
-
-            <DialogFooter className="border-t border-base-300 bg-base-200/45 p-5 sm:justify-between">
-              <button type="button" className="btn btn-ghost btn-sm h-9 min-h-9 rounded-lg px-4" onClick={() => setPasswordDialogOpen(false)}>
-                Cancelar
-              </button>
-              <Button
-                type="submit"
-                variant="ghost"
-                className="btn btn-primary btn-sm h-9 min-h-9 rounded-lg px-4 shadow-sm"
-                disabled={isUnlocking || !password.trim()}
-              >
-                {isUnlocking ? <span className="loading loading-spinner loading-sm" /> : <Eye aria-hidden="true" />}
-                {isUnlocking ? "Verificando…" : "Desbloquear"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
 
       <PrayerManagerDialog
         key={`${prayerDialog?.contact.id ?? "closed"}-${prayerDialog?.mode ?? "add"}-${prayerSession?.uid ?? "guest"}`}
