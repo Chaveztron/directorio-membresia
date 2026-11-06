@@ -124,6 +124,7 @@ Después haz `git push`. El flujo de GitHub Actions incluirá la configuración 
 
 - Los botones de oraciones solo aparecen cuando la información del directorio está desbloqueada.
 - Cada tarjeta con registros muestra **Ver oraciones (n)** sin solicitar la contraseña administrativa.
+- La pestaña **Todas las oraciones** reúne las peticiones de todos los miembros en una sola vista de consulta, agrupadas por nombre.
 - La ventana de consulta no permite modificar ni eliminar las peticiones.
 - **Agregar oración** y **Administrar oraciones** solicitan la contraseña administrativa si todavía no hay una sesión activa.
 - El formulario permite agregar varios renglones, consultar, editar y marcar registros para eliminación antes de pulsar **Guardar cambios**.

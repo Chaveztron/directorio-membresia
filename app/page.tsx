@@ -47,6 +47,8 @@ type SensitiveInfo = {
 
 type SensitiveDirectory = Record<string, SensitiveInfo>;
 
+type DirectoryView = "directory" | "prayers";
+
 type PrayerDialogState = {
   contact: {
     id: string;
@@ -111,6 +113,7 @@ function initials(name: string) {
 }
 
 export default function Home() {
+  const [activeView, setActiveView] = useState<DirectoryView>("directory");
   const [query, setQuery] = useState("");
   const [password, setPassword] = useState("");
   const [isUnlocking, setIsUnlocking] = useState(false);
@@ -143,7 +146,6 @@ export default function Home() {
     if (!isUnlocked || !isPrayerStorageConfigured) return;
 
     let cancelled = false;
-    setPrayerLoadError("");
 
     void listPrayers()
       .then((nextPrayers) => {
@@ -174,6 +176,7 @@ export default function Home() {
 
   function lockDirectory() {
     setSensitiveDirectory(null);
+    setActiveView("directory");
     setQuery("");
     setPrayerSession(null);
     setPrayers(null);
@@ -314,165 +317,229 @@ export default function Home() {
           </div>
         </header>
 
-        <section aria-label="Búsqueda de contactos" className="mb-5">
-          <label className="directory-search input input-bordered flex h-11 w-full items-center gap-2.5 rounded-xl bg-base-100 px-3.5 focus-within:border-primary focus-within:outline-none">
-            <Search aria-hidden="true" className="size-5 text-base-content/45" />
-            <Input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar por nombre…"
-              aria-label="Buscar contacto por nombre"
-              className="h-full border-0 bg-transparent px-0 text-sm shadow-none outline-none focus-visible:border-0 focus-visible:ring-0"
-              />
-            {query && (
-              <button
-                type="button"
-                className="btn btn-ghost btn-xs h-7 min-h-7 rounded-md px-2 text-xs"
-                onClick={() => setQuery("")}
-              >
-                Limpiar
-              </button>
-            )}
-          </label>
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 px-1 text-sm text-base-content/65">
-            <p aria-live="polite">
-              {filteredContacts.length} de {PUBLIC_CONTACTS.length} contactos
-            </p>
-              <span
-                role="status"
-                aria-live="polite"
-                className="directory-status directory-status--visible"
-              >
-                <Eye aria-hidden="true" />
-                <span>Datos visibles</span>
-              </span>
-          </div>
-          {isUnlocked && prayerLoadError && (
-            <p
-              className="mt-2 rounded-xl border border-error/20 bg-error/5 px-3 py-2 text-sm font-medium text-error"
-              role="alert"
-            >
-              {prayerLoadError}
-            </p>
-          )}
-        </section>
-
-        {filteredContacts.length > 0 ? (
-          <section
-            aria-label="Lista de contactos"
-            className="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
+        <nav
+          aria-label="Secciones del directorio"
+          className="mb-5 flex w-full gap-1 rounded-2xl border border-base-300 bg-base-100 p-1.5 shadow-sm sm:w-fit"
+          role="tablist"
+        >
+          <button
+            type="button"
+            id="directory-tab"
+            role="tab"
+            aria-selected={activeView === "directory"}
+            aria-controls="directory-panel"
+            className={`flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold transition-colors sm:flex-none ${
+              activeView === "directory"
+                ? "bg-primary text-primary-content shadow-sm"
+                : "text-base-content/60 hover:bg-base-200 hover:text-base-content"
+            }`}
+            onClick={() => setActiveView("directory")}
           >
-            {filteredContacts.map((contact) => {
-              const details = sensitiveDirectory?.[contact.id];
-              const displayName = details?.nombreCompleto
-                ?? (details ? contact.nombre : firstName(contact.nombre));
+            <UsersRound aria-hidden="true" className="size-4" />
+            Directorio
+          </button>
+          <button
+            type="button"
+            id="prayers-tab"
+            role="tab"
+            aria-selected={activeView === "prayers"}
+            aria-controls="prayers-panel"
+            className={`flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold transition-colors sm:flex-none ${
+              activeView === "prayers"
+                ? "bg-primary text-primary-content shadow-sm"
+                : "text-base-content/60 hover:bg-base-200 hover:text-base-content"
+            }`}
+            onClick={() => setActiveView("prayers")}
+          >
+            <BookHeart aria-hidden="true" className="size-4" />
+            Todas las oraciones
+            {prayers !== null && prayers.length > 0 && (
+              <span
+                className={`rounded-full px-2 py-0.5 text-[0.68rem] leading-none ${
+                  activeView === "prayers"
+                    ? "bg-white/20 text-white"
+                    : "bg-primary/10 text-primary"
+                }`}
+              >
+                {prayers.length}
+              </span>
+            )}
+          </button>
+        </nav>
 
-              return (
-                <article
-                  key={contact.id}
-                  className="directory-card card overflow-hidden rounded-2xl border border-base-300 bg-base-100"
+        {activeView === "directory" ? (
+          <div
+            id="directory-panel"
+            role="tabpanel"
+            aria-labelledby="directory-tab"
+          >
+            <section aria-label="Búsqueda de contactos" className="mb-5">
+              <label className="directory-search input input-bordered flex h-11 w-full items-center gap-2.5 rounded-xl bg-base-100 px-3.5 focus-within:border-primary focus-within:outline-none">
+                <Search aria-hidden="true" className="size-5 text-base-content/45" />
+                <Input
+                  type="search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Buscar por nombre…"
+                  aria-label="Buscar contacto por nombre"
+                  className="h-full border-0 bg-transparent px-0 text-sm shadow-none outline-none focus-visible:border-0 focus-visible:ring-0"
+                />
+                {query && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-xs h-7 min-h-7 rounded-md px-2 text-xs"
+                    onClick={() => setQuery("")}
+                  >
+                    Limpiar
+                  </button>
+                )}
+              </label>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 px-1 text-sm text-base-content/65">
+                <p aria-live="polite">
+                  {filteredContacts.length} de {PUBLIC_CONTACTS.length} contactos
+                </p>
+                <span
+                  role="status"
+                  aria-live="polite"
+                  className="directory-status directory-status--visible"
                 >
-                  <div className="h-1 bg-gradient-to-r from-primary via-cyan-600 to-sky-300" />
+                  <Eye aria-hidden="true" />
+                  <span>Datos visibles</span>
+                </span>
+              </div>
+              {prayerLoadError && (
+                <p
+                  className="mt-2 rounded-xl border border-error/20 bg-error/5 px-3 py-2 text-sm font-medium text-error"
+                  role="alert"
+                >
+                  {prayerLoadError}
+                </p>
+              )}
+            </section>
 
-                  <div className="card-body gap-0 p-0">
-                    <div className="flex items-center gap-3.5 border-b border-base-300 bg-gradient-to-br from-white to-sky-50/80 px-5 py-4">
-                      <ContactAvatar
-                        image={details ? contact.imagen : null}
-                        name={displayName}
-                      />
+            {filteredContacts.length > 0 ? (
+              <section
+                aria-label="Lista de contactos"
+                className="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
+              >
+                {filteredContacts.map((contact) => {
+                  const details = sensitiveDirectory?.[contact.id];
+                  const displayName = details?.nombreCompleto
+                    ?? (details ? contact.nombre : firstName(contact.nombre));
 
-                      <div className="min-w-0 flex-1">
-                        <h2 className="truncate text-lg font-bold tracking-tight text-base-content">
-                          {displayName}
-                        </h2>
-                        <p className="mt-0.5 text-xs font-medium text-base-content/50">
-                          Miembro del directorio
-                        </p>
-                      </div>
-                    </div>
+                  return (
+                    <article
+                      key={contact.id}
+                      className="directory-card card overflow-hidden rounded-2xl border border-base-300 bg-base-100"
+                    >
+                      <div className="h-1 bg-gradient-to-r from-primary via-cyan-600 to-sky-300" />
 
-                    {details ? (
-                      <div className="px-5 pb-5 pt-4">
-                        <div className="space-y-1">
-                          <CompactRow
-                            icon={CalendarDays}
-                            value={details.fechaNacimiento}
+                      <div className="card-body gap-0 p-0">
+                        <div className="flex items-center gap-3.5 border-b border-base-300 bg-gradient-to-br from-white to-sky-50/80 px-5 py-4">
+                          <ContactAvatar
+                            image={details ? contact.imagen : null}
+                            name={displayName}
                           />
-                          <CompactRow
-                            icon={MapPin}
-                            value={details.direccion}
-                          />
-                          <CompactRow
-                            icon={Phone}
-                            value={details.telefono}
-                            href={`tel:${details.telefono.replace(/[^+\d]/g, "")}`}
-                          />
-                          <CompactRow
-                            icon={HeartHandshake}
-                            value={details.estadoCivil}
-                          />
+
+                          <div className="min-w-0 flex-1">
+                            <h2 className="truncate text-lg font-bold tracking-tight text-base-content">
+                              {displayName}
+                            </h2>
+                            <p className="mt-0.5 text-xs font-medium text-base-content/50">
+                              Miembro del directorio
+                            </p>
+                          </div>
                         </div>
 
-                        <PrayerActions
-                          count={prayerCounts[contact.id] ?? 0}
-                          countsLoaded={prayers !== null}
-                          onView={() => openPrayerDialog({
-                            id: contact.id,
-                            nombre: displayName,
-                          }, "view")}
-                          onAdd={() => openPrayerDialog({
-                            id: contact.id,
-                            nombre: displayName,
-                          }, "add")}
-                        />
+                        {details ? (
+                          <div className="px-5 pb-5 pt-4">
+                            <div className="space-y-1">
+                              <CompactRow
+                                icon={CalendarDays}
+                                value={details.fechaNacimiento}
+                              />
+                              <CompactRow
+                                icon={MapPin}
+                                value={details.direccion}
+                              />
+                              <CompactRow
+                                icon={Phone}
+                                value={details.telefono}
+                                href={`tel:${details.telefono.replace(/[^+\d]/g, "")}`}
+                              />
+                              <CompactRow
+                                icon={HeartHandshake}
+                                value={details.estadoCivil}
+                              />
+                            </div>
 
-                        <div className="my-4 h-px bg-base-300" />
+                            <PrayerActions
+                              count={prayerCounts[contact.id] ?? 0}
+                              countsLoaded={prayers !== null}
+                              onView={() => openPrayerDialog({
+                                id: contact.id,
+                                nombre: displayName,
+                              }, "view")}
+                              onAdd={() => openPrayerDialog({
+                                id: contact.id,
+                                nombre: displayName,
+                              }, "add")}
+                            />
 
-                        <div className="space-y-4">
-                          <LabeledRow
-                            icon={Church}
-                            label="Ingreso a la membresía"
-                            value={details.fechaIngreso}
-                          />
-                          <TagList
-                            icon={UsersRound}
-                            label="Ministerios en los que sirve"
-                            values={details.ministerios}
-                          />
-                          <TagList
-                            icon={BriefcaseBusiness}
-                            label="Conocimientos, habilidades u oficio"
-                            values={details.habilidades}
-                          />
-                        </div>
+                            <div className="my-4 h-px bg-base-300" />
+
+                            <div className="space-y-4">
+                              <LabeledRow
+                                icon={Church}
+                                label="Ingreso a la membresía"
+                                value={details.fechaIngreso}
+                              />
+                              <TagList
+                                icon={UsersRound}
+                                label="Ministerios en los que sirve"
+                                values={details.ministerios}
+                              />
+                              <TagList
+                                icon={BriefcaseBusiness}
+                                label="Conocimientos, habilidades u oficio"
+                                values={details.habilidades}
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="px-5 pb-5 pt-4">
+                            <div className="rounded-xl border border-dashed border-base-300 bg-base-200/55 px-4 py-4 text-center">
+                              <LockKeyhole
+                                aria-hidden="true"
+                                className="mx-auto mb-2 size-5 text-base-content/35"
+                              />
+                              <p className="mb-3 text-sm text-base-content/60">
+                                La información de este contacto no está disponible.
+                              </p>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <div className="px-5 pb-5 pt-4">
-                        <div className="rounded-xl border border-dashed border-base-300 bg-base-200/55 px-4 py-4 text-center">
-                          <LockKeyhole
-                            aria-hidden="true"
-                            className="mx-auto mb-2 size-5 text-base-content/35"
-                          />
-                          <p className="mb-3 text-sm text-base-content/60">
-                            La información de este contacto no está disponible.
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </article>
-              );
-            })}
-          </section>
+                    </article>
+                  );
+                })}
+              </section>
+            ) : (
+              <section className="rounded-box border border-dashed border-base-300 bg-base-100 px-6 py-14 text-center">
+                <UserRound aria-hidden="true" className="mx-auto mb-3 size-10 text-base-content/30" />
+                <h2 className="text-lg font-bold">No encontramos ese contacto</h2>
+                <p className="mt-1 text-base-content/60">
+                  Revisa el nombre o intenta con menos palabras.
+                </p>
+              </section>
+            )}
+          </div>
         ) : (
-          <section className="rounded-box border border-dashed border-base-300 bg-base-100 px-6 py-14 text-center">
-            <UserRound aria-hidden="true" className="mx-auto mb-3 size-10 text-base-content/30" />
-            <h2 className="text-lg font-bold">No encontramos ese contacto</h2>
-            <p className="mt-1 text-base-content/60">
-              Revisa el nombre o intenta con menos palabras.
-            </p>
-          </section>
+          <AllPrayersView
+            directory={sensitiveDirectory}
+            error={prayerLoadError}
+            prayers={prayers}
+          />
         )}
       </div>
 
@@ -490,6 +557,165 @@ export default function Home() {
         onPrayersChange={setPrayers}
       />
     </main>
+  );
+}
+
+function formatPrayerDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Fecha no disponible";
+
+  return new Intl.DateTimeFormat("es-MX", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+function AllPrayersView({ directory, error, prayers }: {
+  directory: SensitiveDirectory;
+  error: string;
+  prayers: Prayer[] | null;
+}) {
+  const groups = useMemo(() => {
+    if (!prayers) return [];
+
+    return PUBLIC_CONTACTS.flatMap((contact) => {
+      const contactPrayers = prayers
+        .filter((prayer) => prayer.contactId === contact.id)
+        .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+
+      if (contactPrayers.length === 0) return [];
+
+      return [{
+        id: contact.id,
+        name: directory[contact.id]?.nombreCompleto ?? contact.nombre,
+        prayers: contactPrayers,
+      }];
+    }).sort((left, right) => left.name.localeCompare(right.name, "es-MX"));
+  }, [directory, prayers]);
+
+  return (
+    <section
+      id="prayers-panel"
+      role="tabpanel"
+      aria-labelledby="prayers-tab"
+      aria-live="polite"
+    >
+      <div className="mb-5 overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/10 via-base-100 to-sky-50 shadow-sm">
+        <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <div className="flex items-center gap-3.5">
+            <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-primary text-primary-content shadow-sm">
+              <BookHeart aria-hidden="true" className="size-6" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold tracking-tight sm:text-2xl">
+                Todas las oraciones
+              </h2>
+              <p className="mt-0.5 text-sm text-base-content/60">
+                Consulta las peticiones agrupadas por miembro.
+              </p>
+            </div>
+          </div>
+
+          {prayers !== null && !error && (
+            <div className="flex gap-2 text-center">
+              <div className="min-w-20 rounded-xl border border-primary/15 bg-base-100/80 px-3 py-2 shadow-sm">
+                <p className="text-xl font-bold text-primary">{prayers.length}</p>
+                <p className="text-[0.68rem] font-bold uppercase tracking-wide text-base-content/50">
+                  Oraciones
+                </p>
+              </div>
+              <div className="min-w-20 rounded-xl border border-primary/15 bg-base-100/80 px-3 py-2 shadow-sm">
+                <p className="text-xl font-bold text-primary">{groups.length}</p>
+                <p className="text-[0.68rem] font-bold uppercase tracking-wide text-base-content/50">
+                  Miembros
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {!isPrayerStorageConfigured ? (
+        <div className="rounded-2xl border border-warning/30 bg-warning/10 px-6 py-10 text-center">
+          <BookHeart aria-hidden="true" className="mx-auto mb-3 size-9 text-warning-content/60" />
+          <h3 className="font-bold">Firebase todavía no está configurado</h3>
+          <p className="mx-auto mt-1 max-w-lg text-sm text-base-content/60">
+            Agrega las variables de Firebase para cargar la lista de oraciones.
+          </p>
+        </div>
+      ) : error ? (
+        <div className="rounded-2xl border border-error/20 bg-error/5 px-6 py-10 text-center text-error" role="alert">
+          <BookHeart aria-hidden="true" className="mx-auto mb-3 size-9 opacity-60" />
+          <h3 className="font-bold">No fue posible cargar las oraciones</h3>
+          <p className="mx-auto mt-1 max-w-lg text-sm">{error}</p>
+        </div>
+      ) : prayers === null ? (
+        <div className="rounded-2xl border border-dashed border-base-300 bg-base-100 px-6 py-14 text-center">
+          <span className="loading loading-spinner loading-lg text-primary" />
+          <p className="mt-3 text-sm font-semibold text-base-content/65">
+            Cargando todas las oraciones…
+          </p>
+        </div>
+      ) : groups.length > 0 ? (
+        <div className="grid items-start gap-4 lg:grid-cols-2">
+          {groups.map((group) => (
+            <article
+              key={group.id}
+              className="overflow-hidden rounded-2xl border border-base-300 bg-base-100 shadow-sm"
+            >
+              <header className="flex items-center gap-3 border-b border-base-300 bg-gradient-to-r from-primary/8 to-sky-50 px-5 py-4">
+                <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary text-sm font-bold text-primary-content shadow-sm">
+                  {initials(group.name)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="truncate font-bold text-base-content">
+                    {group.name}
+                  </h3>
+                  <p className="mt-0.5 text-xs font-semibold text-base-content/50">
+                    {group.prayers.length === 1
+                      ? "1 oración"
+                      : `${group.prayers.length} oraciones`}
+                  </p>
+                </div>
+              </header>
+
+              <ol className="space-y-3 p-4 sm:p-5">
+                {group.prayers.map((prayer, index) => (
+                  <li
+                    key={prayer.id}
+                    className="grid grid-cols-[2rem_minmax(0,1fr)] gap-3 rounded-xl border border-base-300 bg-base-200/30 p-3.5"
+                  >
+                    <span className="grid size-8 place-items-center rounded-lg bg-primary/10 text-xs font-bold text-primary">
+                      {index + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-base-content/85">
+                        {prayer.text}
+                      </p>
+                      <time
+                        dateTime={prayer.createdAt}
+                        className="mt-2 block text-[0.7rem] font-semibold text-base-content/45"
+                      >
+                        {formatPrayerDate(prayer.createdAt)}
+                      </time>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-dashed border-base-300 bg-base-100 px-6 py-14 text-center">
+          <BookHeart aria-hidden="true" className="mx-auto mb-3 size-10 text-base-content/25" />
+          <h3 className="text-lg font-bold">Todavía no hay oraciones</h3>
+          <p className="mt-1 text-sm text-base-content/60">
+            Cuando se agregue la primera petición aparecerá en esta sección.
+          </p>
+        </div>
+      )}
+    </section>
   );
 }
 

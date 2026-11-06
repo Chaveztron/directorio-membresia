@@ -97,3 +97,16 @@ test("allows prayer consultation without granting public write access", async ()
   assert.match(dialog, /Modo de consulta · solo lectura/);
   assert.match(dialog, /Administrar oraciones/);
 });
+
+test("includes a read-only tab with every prayer grouped by member", async () => {
+  const source = await readFile(
+    new URL("../app/page.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /Todas las oraciones/);
+  assert.match(source, /activeView === "prayers"/);
+  assert.match(source, /Consulta las peticiones agrupadas por miembro/);
+  assert.match(source, /prayer\.contactId === contact\.id/);
+  assert.match(source, /role="tabpanel"/);
+});
