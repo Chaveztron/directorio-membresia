@@ -128,6 +128,13 @@ Después haz `git push`. El flujo de GitHub Actions incluirá la configuración 
 - La ventana de consulta no permite modificar ni eliminar las peticiones.
 - **Agregar oración** y **Administrar oraciones** solicitan la contraseña administrativa si todavía no hay una sesión activa.
 - El formulario permite agregar varios renglones, consultar, editar y marcar registros para eliminación antes de pulsar **Guardar cambios**.
+- Después de desbloquear el directorio aparece **Buzón de sugerencias**. Cualquier persona con acceso puede enviar un mensaje anónimo.
+- **Consultar buzón** solicita la misma contraseña administrativa de Firebase utilizada para administrar las oraciones. Si esa sesión ya está activa, se reutiliza.
+- Las sugerencias se guardan en la colección `suggestions`; únicamente la cuenta administrativa puede leerlas y la bandeja es de solo consulta.
 - Al ocultar nuevamente la información del directorio también se cierra la sesión administrativa.
 
+Después de instalar esta actualización en un proyecto que ya estaba publicado, vuelve a copiar el contenido completo de `firestore.rules` en **Firebase Console → Firestore Database → Rules** y pulsa **Publish**. No necesitas crear variables nuevas en GitHub.
+
 > Importante: las reglas permiten leer la colección `prayers` sin autenticación para ofrecer esta consulta. La interfaz solo muestra el botón después de desbloquear el directorio, pero los textos deben considerarse información públicamente legible desde la API de Firestore. No almacenes peticiones confidenciales con esta modalidad.
+
+> **Seguridad del buzón:** como GitHub Pages es estático, Firestore debe permitir la creación anónima en `suggestions`. El botón solo aparece después de desbloquear la interfaz, pero alguien que conozca la API podría intentar enviar mensajes directamente. Las reglas limitan los campos y el tamaño a 2000 caracteres; para protección estricta contra abuso se necesitaría Firebase App Check o una función de servidor.

@@ -12,6 +12,7 @@ import {
   LockKeyhole,
   ListPlus,
   MapPin,
+  MessageSquareText,
   Phone,
   Search,
   ShieldCheck,
@@ -23,6 +24,7 @@ import type { FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { PrayerManagerDialog } from "@/components/prayer-manager-dialog";
+import { SuggestionMailboxDialog } from "@/components/suggestion-mailbox-dialog";
 import { Input } from "@/components/ui/input";
 import {
   ENCRYPTED_DIRECTORY,
@@ -126,6 +128,7 @@ export default function Home() {
   const [prayerLoadError, setPrayerLoadError] = useState("");
   const [prayerDialog, setPrayerDialog] =
     useState<PrayerDialogState | null>(null);
+  const [suggestionDialogOpen, setSuggestionDialogOpen] = useState(false);
 
   const filteredContacts = useMemo(() => {
     const normalizedQuery = normalize(query);
@@ -182,6 +185,7 @@ export default function Home() {
     setPrayers(null);
     setPrayerLoadError("");
     setPrayerDialog(null);
+    setSuggestionDialogOpen(false);
     setPassword("");
     setUnlockError("");
   }
@@ -306,14 +310,25 @@ export default function Home() {
               </div>
             </div>
 
-            <Button
-              type="button"
-              variant="ghost"
-              className="btn btn-outline btn-error btn-sm h-9 min-h-9 rounded-lg px-3.5 text-sm shadow-sm"
-              onClick={lockDirectory}
-            >
-              <EyeOff aria-hidden="true" /> Ocultar información
-            </Button>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+              <Button
+                type="button"
+                variant="ghost"
+                className="btn btn-primary btn-sm h-9 min-h-9 rounded-lg px-3.5 text-sm shadow-sm"
+                onClick={() => setSuggestionDialogOpen(true)}
+              >
+                <MessageSquareText aria-hidden="true" />
+                Buzón de sugerencias
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="btn btn-outline btn-error btn-sm h-9 min-h-9 rounded-lg px-3.5 text-sm shadow-sm"
+                onClick={lockDirectory}
+              >
+                <EyeOff aria-hidden="true" /> Ocultar información
+              </Button>
+            </div>
           </div>
         </header>
 
@@ -555,6 +570,13 @@ export default function Home() {
         }}
         onSessionChange={setPrayerSession}
         onPrayersChange={setPrayers}
+      />
+
+      <SuggestionMailboxDialog
+        open={suggestionDialogOpen}
+        session={prayerSession}
+        onOpenChange={setSuggestionDialogOpen}
+        onSessionChange={setPrayerSession}
       />
     </main>
   );

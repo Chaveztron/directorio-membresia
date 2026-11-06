@@ -22,6 +22,7 @@ test("renders only the member count while the directory is locked", async () => 
   );
   assert.doesNotMatch(html, /Donato Guerra 111/);
   assert.doesNotMatch(html, /664 224 9920/);
+  assert.doesNotMatch(html, /Buzón de sugerencias/);
 });
 
 test("reveals the complete directory only after unlocking", async () => {
@@ -109,4 +110,36 @@ test("includes a read-only tab with every prayer grouped by member", async () =>
   assert.match(source, /Consulta las peticiones agrupadas por miembro/);
   assert.match(source, /prayer\.contactId === contact\.id/);
   assert.match(source, /role="tabpanel"/);
+});
+
+test("accepts suggestions publicly but protects the administrative inbox", async () => {
+  const page = await readFile(
+    new URL("../app/page.tsx", import.meta.url),
+    "utf8",
+  );
+  const dialog = await readFile(
+    new URL("../components/suggestion-mailbox-dialog.tsx", import.meta.url),
+    "utf8",
+  );
+  const storage = await readFile(
+    new URL("../lib/suggestions.ts", import.meta.url),
+    "utf8",
+  );
+  const rules = await readFile(
+    new URL("../firestore.rules", import.meta.url),
+    "utf8",
+  );
+  const suggestionRules = rules.match(
+    /match \/suggestions\/\{suggestionId\} \{[\s\S]*?\n    \}/,
+  )?.[0] ?? "";
+
+  assert.match(page, /Buzón de sugerencias/);
+  assert.match(dialog, /¿En qué podemos mejorar\?/);
+  assert.match(dialog, /Queremos escuchar tu opinión/);
+  assert.match(dialog, /signInPrayerAdmin/);
+  assert.match(dialog, /listSuggestions/);
+  assert.match(storage, /export async function createSuggestion/);
+  assert.match(suggestionRules, /allow create:\s*if hasValidSuggestionFields\(\)/);
+  assert.match(suggestionRules, /allow read:\s*if isPrayerAdmin\(\)/);
+  assert.match(suggestionRules, /allow update, delete:\s*if false/);
 });
