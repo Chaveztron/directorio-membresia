@@ -143,3 +143,32 @@ test("accepts suggestions publicly but protects the administrative inbox", async
   assert.match(suggestionRules, /allow read:\s*if isPrayerAdmin\(\)/);
   assert.match(suggestionRules, /allow update, delete:\s*if false/);
 });
+
+test("stores prayer status, its automatic date, and renders status colors", async () => {
+  const storage = await readFile(
+    new URL("../lib/prayers.ts", import.meta.url),
+    "utf8",
+  );
+  const dialog = await readFile(
+    new URL("../components/prayer-manager-dialog.tsx", import.meta.url),
+    "utf8",
+  );
+  const page = await readFile(
+    new URL("../app/page.tsx", import.meta.url),
+    "utf8",
+  );
+  const rules = await readFile(
+    new URL("../firestore.rules", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(storage, /type PrayerStatus = "fulfilled" \| "not_fulfilled"/);
+  assert.match(storage, /statusChangedAt/);
+  assert.match(dialog, /✅/);
+  assert.match(dialog, /❌/);
+  assert.match(dialog, /Limpiar estado/);
+  assert.match(dialog, /status \? new Date\(\)\.toISOString\(\) : null/);
+  assert.match(page, /prayer\.status === "fulfilled"/);
+  assert.match(rules, /"statusChangedAt"/);
+  assert.match(rules, /"not_fulfilled"/);
+});

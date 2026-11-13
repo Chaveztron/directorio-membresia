@@ -34,6 +34,7 @@ import {
   updatePrayer,
 } from "@/lib/prayers";
 import type { Prayer, PrayerAdminSession } from "@/lib/prayers";
+import type { PrayerStatus } from "@/lib/prayers";
 
 type ContactReference = {
   id: string;
@@ -45,6 +46,8 @@ type PrayerDraft = {
   id?: string;
   text: string;
   createdAt?: string;
+  status: PrayerStatus | null;
+  statusChangedAt: string | null;
 };
 
 type PrayerManagerDialogProps = {
@@ -62,6 +65,8 @@ function createDraft(): PrayerDraft {
   return {
     key: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
     text: "",
+    status: null,
+    statusChangedAt: null,
   };
 }
 
@@ -80,6 +85,8 @@ function createDrafts(
       id: prayer.id,
       text: prayer.text,
       createdAt: prayer.createdAt,
+      status: prayer.status,
+      statusChangedAt: prayer.statusChangedAt,
     }));
 
   if (mode === "add") drafts.push(createDraft());
@@ -93,6 +100,50 @@ function formatDate(value?: string) {
     month: "short",
     year: "numeric",
   }).format(new Date(value));
+}
+
+function prayerCardClass(status: PrayerStatus | null) {
+  if (status === "fulfilled") {
+    return "border-success/40 bg-success/8";
+  }
+  if (status === "not_fulfilled") {
+    return "border-error/40 bg-error/8";
+  }
+  return "border-base-300 bg-base-100";
+}
+
+function prayerTextareaClass(status: PrayerStatus | null) {
+  if (status === "fulfilled") {
+    return "border-success/35 bg-success/5 focus:border-success";
+  }
+  if (status === "not_fulfilled") {
+    return "border-error/35 bg-error/5 focus:border-error";
+  }
+  return "border-base-300 bg-base-100 focus:border-primary";
+}
+
+function PrayerStatusBadge({
+  status,
+  statusChangedAt,
+}: {
+  status: PrayerStatus | null;
+  statusChangedAt: string | null;
+}) {
+  if (!status) return null;
+
+  const fulfilled = status === "fulfilled";
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-bold ${
+        fulfilled
+          ? "border-success/30 bg-success/10 text-success"
+          : "border-error/30 bg-error/10 text-error"
+      }`}
+    >
+      {fulfilled ? "✅ Cumplida" : "❌ No cumplida"}
+      {statusChangedAt ? ` · ${formatDate(statusChangedAt)}` : ""}
+    </span>
+  );
 }
 
 export function PrayerManagerDialog({
@@ -157,6 +208,20 @@ export function PrayerManagerDialog({
     setSuccess("");
   }
 
+  function updateDraftStatus(key: string, status: PrayerStatus | null) {
+    setDrafts((current) => current.map((draft) =>
+      draft.key === key
+        ? {
+            ...draft,
+            status,
+            statusChangedAt: status ? new Date().toISOString() : null,
+          }
+        : draft
+    ));
+    setSuccess("");
+    setError("");
+  }
+
   function removeDraft(draft: PrayerDraft) {
     setDrafts((current) => current.filter((item) => item.key !== draft.key));
     if (draft.id) {
@@ -178,7 +243,10 @@ export function PrayerManagerDialog({
   const hasChanges = deletedIds.length > 0 || drafts.some((draft) => {
     const text = draft.text.trim();
     if (!draft.id) return Boolean(text);
-    return originalById.get(draft.id)?.text !== text;
+    const original = originalById.get(draft.id);
+    return original?.text !== text
+      || original.status !== draft.status
+      || original.statusChangedAt !== draft.statusChangedAt;
   });
 
   async function saveChanges(event: FormEvent<HTMLFormElement>) {
@@ -210,13 +278,30 @@ export function PrayerManagerDialog({
         if (!text) continue;
 
         if (!draft.id) {
-          operations.push(createPrayer(session.idToken, contact.id, text));
+          operations.push(createPrayer(
+            session.idToken,
+            contact.id,
+            text,
+            draft.status,
+            draft.statusChangedAt,
+          ));
           continue;
         }
 
         const original = originalById.get(draft.id);
-        if (original && original.text !== text) {
-          operations.push(updatePrayer(session.idToken, original, text));
+        const prayerChanged = original && (
+          original.text !== text
+          || original.status !== draft.status
+          || original.statusChangedAt !== draft.statusChangedAt
+        );
+        if (original && prayerChanged) {
+          operations.push(updatePrayer(
+            session.idToken,
+            original,
+            text,
+            draft.status,
+            draft.statusChangedAt,
+          ));
         }
       }
 
@@ -344,11 +429,17 @@ export function PrayerManagerDialog({
                   {contactPrayers.map((prayer, index) => (
                     <article
                       key={prayer.id}
-                      className="rounded-xl border border-base-300 bg-base-100 p-4 shadow-sm"
+                      className={`rounded-xl border p-4 shadow-sm ${prayerCardClass(prayer.status)}`}
                     >
-                      <p className="mb-2 text-xs font-bold text-base-content/55">
-                        Oración {index + 1} · {formatDate(prayer.createdAt)}
-                      </p>
+                      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-xs font-bold text-base-content/55">
+                          Oración {index + 1} · {formatDate(prayer.createdAt)}
+                        </p>
+                        <PrayerStatusBadge
+                          status={prayer.status}
+                          statusChangedAt={prayer.statusChangedAt}
+                        />
+                      </div>
                       <p className="whitespace-pre-wrap text-sm leading-relaxed text-base-content/85">
                         {prayer.text}
                       </p>
@@ -396,7 +487,7 @@ export function PrayerManagerDialog({
                   </div>
                   <DialogTitle className="text-xl">{title}</DialogTitle>
                   <DialogDescription className="mt-1 text-base-content/60">
-                    Agrega, consulta, edita o elimina peticiones y después guarda los cambios.
+                    Agrega, edita, elimina o cambia el estado de las peticiones y después guarda los cambios.
                   </DialogDescription>
                 </div>
 
@@ -421,11 +512,20 @@ export function PrayerManagerDialog({
               {drafts.length > 0 ? (
                 <div className="space-y-3">
                   {drafts.map((draft, index) => (
-                    <div key={draft.key} className="rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm">
-                      <div className="mb-2 flex items-center justify-between gap-3">
-                        <span className="text-xs font-bold text-base-content/55">
-                          Oración {index + 1} · {formatDate(draft.createdAt)}
-                        </span>
+                    <div
+                      key={draft.key}
+                      className={`rounded-xl border p-3 shadow-sm transition-colors ${prayerCardClass(draft.status)}`}
+                    >
+                      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs font-bold text-base-content/55">
+                            Oración {index + 1} · {formatDate(draft.createdAt)}
+                          </span>
+                          <PrayerStatusBadge
+                            status={draft.status}
+                            statusChangedAt={draft.statusChangedAt}
+                          />
+                        </div>
                         <button
                           type="button"
                           className="btn btn-ghost btn-xs h-7 min-h-7 rounded-lg px-2 text-error"
@@ -436,12 +536,51 @@ export function PrayerManagerDialog({
                           Eliminar
                         </button>
                       </div>
+
+                      <div className="mb-3 grid gap-2 sm:grid-cols-3">
+                        <button
+                          type="button"
+                          aria-pressed={draft.status === "fulfilled"}
+                          className={`btn btn-sm h-auto min-h-9 rounded-lg py-2 ${
+                            draft.status === "fulfilled"
+                              ? "btn-success text-success-content"
+                              : "btn-outline border-success/35 text-success hover:border-success hover:bg-success/10"
+                          }`}
+                          onClick={() => updateDraftStatus(draft.key, "fulfilled")}
+                        >
+                          <span aria-hidden="true">✅</span>
+                          Cumplida
+                        </button>
+                        <button
+                          type="button"
+                          aria-pressed={draft.status === "not_fulfilled"}
+                          className={`btn btn-sm h-auto min-h-9 rounded-lg py-2 ${
+                            draft.status === "not_fulfilled"
+                              ? "btn-error text-error-content"
+                              : "btn-outline border-error/35 text-error hover:border-error hover:bg-error/10"
+                          }`}
+                          onClick={() => updateDraftStatus(draft.key, "not_fulfilled")}
+                        >
+                          <span aria-hidden="true">❌</span>
+                          No cumplida
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-outline btn-sm h-auto min-h-9 rounded-lg py-2"
+                          onClick={() => updateDraftStatus(draft.key, null)}
+                          disabled={draft.status === null}
+                        >
+                          <span aria-hidden="true">↺</span>
+                          Limpiar estado
+                        </button>
+                      </div>
+
                       <Textarea
                         value={draft.text}
                         onChange={(event) => updateDraft(draft.key, event.target.value)}
                         placeholder="Escribe la petición de oración…"
                         maxLength={2_000}
-                        className="textarea textarea-bordered min-h-24 w-full resize-y rounded-xl bg-base-100 text-sm leading-relaxed focus:border-primary"
+                        className={`textarea textarea-bordered min-h-24 w-full resize-y rounded-xl text-sm leading-relaxed ${prayerTextareaClass(draft.status)}`}
                         aria-label={`Texto de la oración ${index + 1}`}
                       />
                       <p className="mt-1 text-right text-[0.7rem] text-base-content/40">

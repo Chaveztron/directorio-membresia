@@ -34,7 +34,7 @@ import {
   isPrayerStorageConfigured,
   listPrayers,
 } from "@/lib/prayers";
-import type { Prayer, PrayerAdminSession } from "@/lib/prayers";
+import type { Prayer, PrayerAdminSession, PrayerStatus } from "@/lib/prayers";
 
 type SensitiveInfo = {
   nombreCompleto?: string;
@@ -593,6 +593,16 @@ function formatPrayerDate(value: string) {
   }).format(date);
 }
 
+function prayerOverviewClass(status: PrayerStatus | null) {
+  if (status === "fulfilled") {
+    return "border-success/35 bg-success/8";
+  }
+  if (status === "not_fulfilled") {
+    return "border-error/35 bg-error/8";
+  }
+  return "border-base-300 bg-base-200/30";
+}
+
 function AllPrayersView({ directory, error, prayers }: {
   directory: SensitiveDirectory;
   error: string;
@@ -706,7 +716,7 @@ function AllPrayersView({ directory, error, prayers }: {
                 {group.prayers.map((prayer, index) => (
                   <li
                     key={prayer.id}
-                    className="grid grid-cols-[2rem_minmax(0,1fr)] gap-3 rounded-xl border border-base-300 bg-base-200/30 p-3.5"
+                    className={`grid grid-cols-[2rem_minmax(0,1fr)] gap-3 rounded-xl border p-3.5 ${prayerOverviewClass(prayer.status)}`}
                   >
                     <span className="grid size-8 place-items-center rounded-lg bg-primary/10 text-xs font-bold text-primary">
                       {index + 1}
@@ -719,8 +729,22 @@ function AllPrayersView({ directory, error, prayers }: {
                         dateTime={prayer.createdAt}
                         className="mt-2 block text-[0.7rem] font-semibold text-base-content/45"
                       >
-                        {formatPrayerDate(prayer.createdAt)}
+                        Registrada: {formatPrayerDate(prayer.createdAt)}
                       </time>
+                      {prayer.status && (
+                        <span
+                          className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-[0.7rem] font-bold ${
+                            prayer.status === "fulfilled"
+                              ? "border-success/30 bg-success/10 text-success"
+                              : "border-error/30 bg-error/10 text-error"
+                          }`}
+                        >
+                          {prayer.status === "fulfilled" ? "✅ Cumplida" : "❌ No cumplida"}
+                          {prayer.statusChangedAt
+                            ? ` · ${formatPrayerDate(prayer.statusChangedAt)}`
+                            : ""}
+                        </span>
+                      )}
                     </div>
                   </li>
                 ))}

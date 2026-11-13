@@ -128,6 +128,7 @@ Después haz `git push`. El flujo de GitHub Actions incluirá la configuración 
 - La ventana de consulta no permite modificar ni eliminar las peticiones.
 - **Agregar oración** y **Administrar oraciones** solicitan la contraseña administrativa si todavía no hay una sesión activa.
 - El formulario permite agregar varios renglones, consultar, editar y marcar registros para eliminación antes de pulsar **Guardar cambios**.
+- En la edición de cada oración, **✅ Cumplida** y **❌ No cumplida** asignan automáticamente la fecha del cambio y muestran la petición en verde o rojo. **↺ Limpiar estado** elimina ambos valores y restaura el color normal. Los cambios se confirman con **Guardar cambios**.
 - Después de desbloquear el directorio aparece **Buzón de sugerencias**. Cualquier persona con acceso puede enviar un mensaje anónimo.
 - **Consultar buzón** solicita la misma contraseña administrativa de Firebase utilizada para administrar las oraciones. Si esa sesión ya está activa, se reutiliza.
 - Las sugerencias se guardan en la colección `suggestions`; únicamente la cuenta administrativa puede leerlas y la bandeja es de solo consulta.

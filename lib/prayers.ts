@@ -5,17 +5,22 @@ export type PrayerAdminSession = {
   expiresAt: number;
 };
 
+export type PrayerStatus = "fulfilled" | "not_fulfilled";
+
 export type Prayer = {
   id: string;
   contactId: string;
   text: string;
   createdAt: string;
   updatedAt: string;
+  status: PrayerStatus | null;
+  statusChangedAt: string | null;
 };
 
 type FirestoreValue = {
   stringValue?: string;
   timestampValue?: string;
+  nullValue?: null;
 };
 
 type FirestoreDocument = {
@@ -133,10 +138,25 @@ function parsePrayer(document: FirestoreDocument): Prayer | null {
   const text = fields?.text?.stringValue;
   const createdAt = fields?.createdAt?.timestampValue;
   const updatedAt = fields?.updatedAt?.timestampValue;
+  const statusValue = fields?.status?.stringValue;
+  const status = statusValue === "fulfilled" || statusValue === "not_fulfilled"
+    ? statusValue
+    : null;
+  const statusChangedAt = status
+    ? (fields?.statusChangedAt?.timestampValue ?? null)
+    : null;
 
   if (!id || !contactId || !text || !createdAt || !updatedAt) return null;
 
-  return { id, contactId, text, createdAt, updatedAt };
+  return {
+    id,
+    contactId,
+    text,
+    createdAt,
+    updatedAt,
+    status,
+    statusChangedAt,
+  };
 }
 
 function serializePrayer(prayer: Omit<Prayer, "id">) {
@@ -146,6 +166,12 @@ function serializePrayer(prayer: Omit<Prayer, "id">) {
       text: { stringValue: prayer.text },
       createdAt: { timestampValue: prayer.createdAt },
       updatedAt: { timestampValue: prayer.updatedAt },
+      status: prayer.status
+        ? { stringValue: prayer.status }
+        : { nullValue: null },
+      statusChangedAt: prayer.statusChangedAt
+        ? { timestampValue: prayer.statusChangedAt }
+        : { nullValue: null },
     },
   };
 }
@@ -198,6 +224,8 @@ export async function createPrayer(
   idToken: string,
   contactId: string,
   text: string,
+  status: PrayerStatus | null = null,
+  statusChangedAt: string | null = null,
 ) {
   const now = new Date().toISOString();
   await firebaseRequest(
@@ -210,6 +238,8 @@ export async function createPrayer(
         text: text.trim(),
         createdAt: now,
         updatedAt: now,
+        status,
+        statusChangedAt,
       })),
     },
     "No fue posible guardar la oración.",
@@ -220,6 +250,8 @@ export async function updatePrayer(
   idToken: string,
   prayer: Prayer,
   text: string,
+  status: PrayerStatus | null,
+  statusChangedAt: string | null,
 ) {
   await firebaseRequest(
     `${firestoreBaseUrl()}/prayers/${encodeURIComponent(prayer.id)}`,
@@ -231,6 +263,8 @@ export async function updatePrayer(
         text: text.trim(),
         createdAt: prayer.createdAt,
         updatedAt: new Date().toISOString(),
+        status,
+        statusChangedAt,
       })),
     },
     "No fue posible actualizar la oración.",
