@@ -127,7 +127,7 @@ Después haz `git push`. El flujo de GitHub Actions incluirá la configuración 
 - Después de guardar, la persona puede limpiar el formulario para agregar otra petición o regresar al directorio.
 - Las peticiones recibidas por ese enlace se guardan en la colección `generalPrayers` y aparecen en la pestaña independiente **Peticiones generales** después de desbloquear el directorio.
 - La pestaña incluye un enlace directo para abrir el formulario público y un buscador por persona/tema, contenido, categoría, estado o fecha.
-- La consulta es pública después de desbloquear el directorio; para marcar **Cumplida**, **No cumplida**, limpiar el estado u ocultar una petición se requiere la sesión administrativa de Firebase.
+- Después de desbloquear el directorio, cualquier persona en la pestaña **Peticiones generales** puede marcar **Cumplida**, **No cumplida**, limpiar el estado u ocultar una petición sin iniciar una sesión administrativa.
 - Al cambiar un estado, Firebase registra automáticamente la fecha y hora. La opción de ocultar pide confirmación, conserva el documento y guarda `hiddenAt`; no realiza un borrado físico.
 - Los botones de oraciones solo aparecen cuando la información del directorio está desbloqueada.
 - Cada tarjeta con registros muestra **Ver oraciones (n)** sin solicitar la contraseña administrativa.
@@ -146,6 +146,6 @@ Después de instalar esta actualización en un proyecto que ya estaba publicado,
 
 > Importante: las reglas permiten leer la colección `prayers` sin autenticación para ofrecer esta consulta. La interfaz solo muestra el botón después de desbloquear el directorio, pero los textos deben considerarse información públicamente legible desde la API de Firestore. No almacenes peticiones confidenciales con esta modalidad.
 
-> **Seguridad del formulario público:** cualquier persona que conozca el enlace puede crear documentos en `generalPrayers`, tal como requiere el formulario. Las reglas restringen los campos, categorías y longitudes, pero GitHub Pages no puede impedir por sí solo los envíos automatizados. Las peticiones generales también se consideran públicamente legibles desde la API para poder mostrarlas en la vista de consulta. Para protección adicional contra abuso se puede habilitar Firebase App Check o usar una función de servidor.
+> **Seguridad de las peticiones generales:** cualquier persona que conozca el enlace puede crear documentos en `generalPrayers`. Además, para permitir los controles sin sesión administrativa, las reglas aceptan actualizaciones públicas limitadas exclusivamente a `status`, `statusChangedAt` y `hiddenAt`; el tema, texto, categoría y fecha original permanecen inmutables. Esta restricción protege el contenido, pero alguien con acceso directo a la API también podría cambiar estados u ocultar peticiones sin usar la interfaz. Para un control de acceso estricto se necesitaría Firebase Authentication, App Check o una función de servidor.
 
 > **Seguridad del buzón:** como GitHub Pages es estático, Firestore debe permitir la creación anónima en `suggestions`. El botón solo aparece después de desbloquear la interfaz, pero alguien que conozca la API podría intentar enviar mensajes directamente. Las reglas limitan los campos y el tamaño a 2000 caracteres; para protección estricta contra abuso se necesitaría Firebase App Check o una función de servidor.

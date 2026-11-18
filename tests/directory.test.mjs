@@ -193,12 +193,32 @@ test("manages general requests with search, statuses, and soft hiding", async ()
   assert.match(generalView, /Limpiar estado/);
   assert.match(generalView, /window\.confirm/);
   assert.match(generalView, /No se borrará de Firebase/);
-  assert.match(generalView, /Administrar peticiones/);
-  assert.match(storage, /export async function updateGeneralPrayerStatus/);
-  assert.match(storage, /export async function hideGeneralPrayer/);
+  assert.doesNotMatch(generalView, /Administrar peticiones/);
+  assert.doesNotMatch(generalView, /signInPrayerAdmin/);
+  assert.match(
+    storage,
+    /export async function updateGeneralPrayerStatus\(\s*prayer: GeneralPrayer/,
+  );
+  assert.match(
+    storage,
+    /export async function hideGeneralPrayer\(\s*prayer: GeneralPrayer/,
+  );
+  assert.doesNotMatch(storage, /Authorization:/);
   assert.match(storage, /fieldPath: "hiddenAt"/);
   assert.match(storage, /prayer\.hiddenAt === null/);
-  assert.match(generalPrayerRules, /allow update:\s*if isPrayerAdmin\(\)/);
+  assert.doesNotMatch(generalPrayerRules, /allow update:\s*if isPrayerAdmin\(\)/);
+  assert.match(
+    generalPrayerRules,
+    /request\.resource\.data\.subject == resource\.data\.subject/,
+  );
+  assert.match(
+    generalPrayerRules,
+    /request\.resource\.data\.statusChangedAt == request\.time/,
+  );
+  assert.match(
+    generalPrayerRules,
+    /request\.resource\.data\.hiddenAt == request\.time/,
+  );
   assert.match(generalPrayerRules, /allow delete:\s*if false/);
 });
 

@@ -626,9 +626,7 @@ export default function Home() {
           <GeneralPrayersView
             error={generalPrayerLoadError}
             prayers={generalPrayers}
-            session={prayerSession}
             onPrayersChange={setGeneralPrayers}
-            onSessionChange={setPrayerSession}
           />
         )}
       </div>

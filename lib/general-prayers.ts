@@ -74,7 +74,9 @@ async function firebaseRequest(
     }
 
     if (response.status === 401) {
-      throw new Error("La sesión administrativa venció. Inicia sesión nuevamente.");
+      throw new Error(
+        "Firebase rechazó las credenciales del proyecto. Revisa la configuración.",
+      );
     }
 
     throw new Error(`${fallbackMessage} (${detail})`);
@@ -227,15 +229,7 @@ function documentName(prayerId: string) {
   return `projects/${firebaseConfig.projectId}/databases/(default)/documents/generalPrayers/${prayerId}`;
 }
 
-function authenticationHeaders(idToken: string) {
-  return {
-    Authorization: `Bearer ${idToken}`,
-    "Content-Type": "application/json",
-  };
-}
-
 async function commitGeneralPrayerUpdate(
-  idToken: string,
   prayerId: string,
   fields: Record<string, FirestoreValue>,
   updateTransforms: {
@@ -250,7 +244,7 @@ async function commitGeneralPrayerUpdate(
     `${firestoreBaseUrl()}:commit`,
     {
       method: "POST",
-      headers: authenticationHeaders(idToken),
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         writes: [{
           update: {
@@ -285,7 +279,6 @@ function preservedFields(prayer: GeneralPrayer): Record<string, FirestoreValue> 
 }
 
 export async function updateGeneralPrayerStatus(
-  idToken: string,
   prayer: GeneralPrayer,
   status: GeneralPrayerStatus | null,
 ) {
@@ -308,7 +301,6 @@ export async function updateGeneralPrayerStatus(
   }
 
   await commitGeneralPrayerUpdate(
-    idToken,
     prayer.id,
     fields,
     updateTransforms,
@@ -317,14 +309,12 @@ export async function updateGeneralPrayerStatus(
 }
 
 export async function hideGeneralPrayer(
-  idToken: string,
   prayer: GeneralPrayer,
 ) {
   const fields = preservedFields(prayer);
   delete fields.hiddenAt;
 
   await commitGeneralPrayerUpdate(
-    idToken,
     prayer.id,
     fields,
     [{
