@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  ArchiveRestore,
+  EyeOff,
   Inbox,
   KeyRound,
   LogIn,
@@ -8,6 +10,7 @@ import {
   MessageSquareText,
   Send,
   ShieldCheck,
+  Trash2,
 } from "lucide-react";
 import { useState } from "react";
 import type { FormEvent } from "react";
@@ -23,6 +26,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  deleteGeneralPrayerPermanently,
+  listGeneralPrayers,
+  listHiddenGeneralPrayers,
+  restoreGeneralPrayer,
+} from "@/lib/general-prayers";
+import type { GeneralPrayer } from "@/lib/general-prayers";
 import { signInPrayerAdmin } from "@/lib/prayers";
 import type { PrayerAdminSession } from "@/lib/prayers";
 import {
@@ -38,6 +48,7 @@ type SuggestionMailboxDialogProps = {
   open: boolean;
   session: PrayerAdminSession | null;
   onOpenChange: (open: boolean) => void;
+  onGeneralPrayersChange: (prayers: GeneralPrayer[] | null) => void;
   onSessionChange: (session: PrayerAdminSession | null) => void;
 };
 
@@ -55,12 +66,15 @@ export function SuggestionMailboxDialog({
   open,
   session,
   onOpenChange,
+  onGeneralPrayersChange,
   onSessionChange,
 }: SuggestionMailboxDialogProps) {
   const [view, setView] = useState<MailboxView>("submit");
   const [text, setText] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [suggestions, setSuggestions] = useState<Suggestion[] | null>(null);
+  const [hiddenPrayers, setHiddenPrayers] = useState<GeneralPrayer[] | null>(null);
+  const [workingPrayerId, setWorkingPrayerId] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -70,6 +84,8 @@ export function SuggestionMailboxDialog({
     setText("");
     setAdminPassword("");
     setSuggestions(null);
+    setHiddenPrayers(null);
+    setWorkingPrayerId(null);
     setError("");
     setSuccess("");
     onOpenChange(false);
@@ -108,16 +124,23 @@ export function SuggestionMailboxDialog({
 
     setView("inbox");
     setSuggestions(null);
+    setHiddenPrayers(null);
     setIsWorking(true);
     setError("");
     setSuccess("");
     try {
-      setSuggestions(await listSuggestions(activeSession.idToken));
+      const [nextSuggestions, nextHiddenPrayers] = await Promise.all([
+        listSuggestions(activeSession.idToken),
+        listHiddenGeneralPrayers(activeSession.idToken),
+      ]);
+      setSuggestions(nextSuggestions);
+      setHiddenPrayers(nextHiddenPrayers);
     } catch (reason) {
       const message = reason instanceof Error
         ? reason.message
         : "No fue posible consultar el buzón.";
       setSuggestions([]);
+      setHiddenPrayers([]);
       setError(message);
 
       if (/sesión administrativa venció/i.test(message)) {
@@ -149,9 +172,13 @@ export function SuggestionMailboxDialog({
     setSuccess("");
     try {
       const nextSession = await signInPrayerAdmin(adminPassword);
-      const nextSuggestions = await listSuggestions(nextSession.idToken);
+      const [nextSuggestions, nextHiddenPrayers] = await Promise.all([
+        listSuggestions(nextSession.idToken),
+        listHiddenGeneralPrayers(nextSession.idToken),
+      ]);
       onSessionChange(nextSession);
       setSuggestions(nextSuggestions);
+      setHiddenPrayers(nextHiddenPrayers);
       setAdminPassword("");
       setView("inbox");
     } catch (reason) {
@@ -168,9 +195,83 @@ export function SuggestionMailboxDialog({
   function logout() {
     onSessionChange(null);
     setSuggestions(null);
+    setHiddenPrayers(null);
     setView("submit");
     setError("");
     setSuccess("");
+  }
+
+  async function validSession() {
+    if (!session) {
+      onSessionChange(null);
+      setView("login");
+      setError("Inicia sesión como administrador para realizar esta acción.");
+      return null;
+    }
+
+    return session;
+  }
+
+  async function restorePrayer(prayer: GeneralPrayer) {
+    const activeSession = await validSession();
+    if (!activeSession) return;
+
+    setWorkingPrayerId(prayer.id);
+    setError("");
+    setSuccess("");
+    try {
+      await restoreGeneralPrayer(activeSession.idToken, prayer);
+      const [nextHiddenPrayers, nextGeneralPrayers] = await Promise.all([
+        listHiddenGeneralPrayers(activeSession.idToken),
+        listGeneralPrayers(),
+      ]);
+      setHiddenPrayers(nextHiddenPrayers);
+      onGeneralPrayersChange(nextGeneralPrayers);
+      setSuccess(`La petición “${prayer.subject}” fue restaurada.`);
+    } catch (reason) {
+      const message = reason instanceof Error
+        ? reason.message
+        : "No fue posible restaurar la petición.";
+      setError(message);
+      if (/sesión administrativa venció/i.test(message)) {
+        onSessionChange(null);
+        setView("login");
+      }
+    } finally {
+      setWorkingPrayerId(null);
+    }
+  }
+
+  async function deletePrayer(prayer: GeneralPrayer) {
+    const activeSession = await validSession();
+    if (!activeSession) return;
+
+    const confirmed = window.confirm(
+      `¿Eliminar definitivamente la petición “${prayer.subject}”?\n\nEsta acción borrará el documento de Firestore y no se puede deshacer.`,
+    );
+    if (!confirmed) return;
+
+    setWorkingPrayerId(prayer.id);
+    setError("");
+    setSuccess("");
+    try {
+      await deleteGeneralPrayerPermanently(activeSession.idToken, prayer.id);
+      setHiddenPrayers((current) => (
+        current?.filter((item) => item.id !== prayer.id) ?? []
+      ));
+      setSuccess(`La petición “${prayer.subject}” fue eliminada definitivamente.`);
+    } catch (reason) {
+      const message = reason instanceof Error
+        ? reason.message
+        : "No fue posible eliminar definitivamente la petición.";
+      setError(message);
+      if (/sesión administrativa venció/i.test(message)) {
+        onSessionChange(null);
+        setView("login");
+      }
+    } finally {
+      setWorkingPrayerId(null);
+    }
   }
 
   return (
@@ -180,7 +281,7 @@ export function SuggestionMailboxDialog({
         if (!nextOpen) closeDialog();
       }}
     >
-      <DialogContent className="max-h-[90vh] overflow-hidden rounded-2xl border-base-300 bg-base-100 p-0 shadow-2xl sm:max-w-2xl">
+      <DialogContent className="max-h-[90vh] overflow-hidden rounded-2xl border-base-300 bg-base-100 p-0 shadow-2xl sm:max-w-3xl">
         {view === "submit" ? (
           <form onSubmit={sendSuggestion}>
             <DialogHeader className="border-b border-base-300 p-5 pb-4">
@@ -328,7 +429,7 @@ export function SuggestionMailboxDialog({
                   </div>
                   <DialogTitle className="text-xl">Buzón de sugerencias</DialogTitle>
                   <DialogDescription className="mt-1 text-base-content/60">
-                    Solo la cuenta administrativa puede consultar estos mensajes.
+                    Consulta las sugerencias y administra las peticiones ocultas.
                   </DialogDescription>
                 </div>
                 <button
@@ -349,38 +450,154 @@ export function SuggestionMailboxDialog({
                 Sesión administrativa activa
               </div>
 
-              {isWorking || suggestions === null ? (
+              {isWorking || suggestions === null || hiddenPrayers === null ? (
                 <div className="rounded-xl border border-dashed border-base-300 bg-base-200/40 px-5 py-8 text-center">
                   <span className="loading loading-spinner loading-md text-primary" />
-                  <p className="mt-3 text-sm font-semibold">Cargando sugerencias…</p>
-                </div>
-              ) : suggestions.length > 0 ? (
-                <div className="space-y-3">
-                  {suggestions.map((suggestion, index) => (
-                    <article
-                      key={suggestion.id}
-                      className="rounded-xl border border-base-300 bg-base-100 p-4 shadow-sm"
-                    >
-                      <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-base-content/50">
-                        <span>Sugerencia {index + 1}</span>
-                        <time dateTime={suggestion.createdAt}>
-                          {formatDate(suggestion.createdAt)}
-                        </time>
-                      </div>
-                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-base-content/85">
-                        {suggestion.text}
-                      </p>
-                    </article>
-                  ))}
+                  <p className="mt-3 text-sm font-semibold">Cargando bandeja administrativa…</p>
                 </div>
               ) : (
-                <div className="rounded-xl border border-dashed border-base-300 bg-base-200/40 px-5 py-8 text-center">
-                  <Inbox aria-hidden="true" className="mx-auto mb-2 size-7 text-base-content/30" />
-                  <p className="text-sm font-semibold">El buzón todavía está vacío.</p>
-                </div>
+                <>
+                  <section aria-labelledby="suggestions-heading" className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h3 id="suggestions-heading" className="font-bold">
+                          Sugerencias recibidas
+                        </h3>
+                        <p className="text-xs text-base-content/55">
+                          Mensajes enviados desde el buzón de sugerencias.
+                        </p>
+                      </div>
+                      <span className="rounded-full border border-primary/15 bg-primary/5 px-2.5 py-1 text-xs font-bold text-primary">
+                        {suggestions.length}
+                      </span>
+                    </div>
+
+                    {suggestions.length > 0 ? (
+                      <div className="space-y-3">
+                        {suggestions.map((suggestion, index) => (
+                          <article
+                            key={suggestion.id}
+                            className="rounded-xl border border-base-300 bg-base-100 p-4 shadow-sm"
+                          >
+                            <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-base-content/50">
+                              <span>Sugerencia {index + 1}</span>
+                              <time dateTime={suggestion.createdAt}>
+                                {formatDate(suggestion.createdAt)}
+                              </time>
+                            </div>
+                            <p className="whitespace-pre-wrap text-sm leading-relaxed text-base-content/85">
+                              {suggestion.text}
+                            </p>
+                          </article>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-dashed border-base-300 bg-base-200/40 px-5 py-7 text-center">
+                        <Inbox aria-hidden="true" className="mx-auto mb-2 size-7 text-base-content/30" />
+                        <p className="text-sm font-semibold">El buzón todavía está vacío.</p>
+                      </div>
+                    )}
+                  </section>
+
+                  <section
+                    aria-labelledby="hidden-prayers-heading"
+                    className="space-y-3 border-t border-base-300 pt-4"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <EyeOff aria-hidden="true" className="size-4 text-primary" />
+                          <h3 id="hidden-prayers-heading" className="font-bold">
+                            Peticiones ocultas
+                          </h3>
+                        </div>
+                        <p className="mt-0.5 text-xs text-base-content/55">
+                          Restaura una petición o elimínala definitivamente de Firestore.
+                        </p>
+                      </div>
+                      <span className="rounded-full border border-primary/15 bg-primary/5 px-2.5 py-1 text-xs font-bold text-primary">
+                        {hiddenPrayers.length}
+                      </span>
+                    </div>
+
+                    {hiddenPrayers.length > 0 ? (
+                      <div className="space-y-3">
+                        {hiddenPrayers.map((prayer) => {
+                          const prayerIsWorking = workingPrayerId === prayer.id;
+
+                          return (
+                            <article
+                              key={prayer.id}
+                              className="rounded-xl border border-base-300 bg-base-100 p-4 shadow-sm"
+                            >
+                              <div className="flex flex-wrap items-start justify-between gap-2">
+                                <h4 className="min-w-0 flex-1 break-words font-bold">
+                                  {prayer.subject}
+                                </h4>
+                                <span className="rounded-full border border-primary/15 bg-primary/5 px-2.5 py-1 text-[0.68rem] font-bold text-primary">
+                                  {prayer.type === "church" ? "Iglesia en general" : "Petición"}
+                                </span>
+                              </div>
+
+                              {prayer.text && (
+                                <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-base-content/75">
+                                  {prayer.text}
+                                </p>
+                              )}
+
+                              <div className="mt-3 space-y-1 border-t border-base-300/70 pt-3 text-[0.7rem] font-semibold text-base-content/50">
+                                <p>Registrada: {formatDate(prayer.createdAt)}</p>
+                                {prayer.hiddenAt && (
+                                  <p>Ocultada: {formatDate(prayer.hiddenAt)}</p>
+                                )}
+                                {prayer.status && (
+                                  <p className={prayer.status === "fulfilled" ? "text-success" : "text-error"}>
+                                    Estado conservado: {prayer.status === "fulfilled" ? "✅ Cumplida" : "❌ No cumplida"}
+                                    {prayer.statusChangedAt
+                                      ? ` · ${formatDate(prayer.statusChangedAt)}`
+                                      : ""}
+                                  </p>
+                                )}
+                              </div>
+
+                              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                                <button
+                                  type="button"
+                                  className="btn btn-outline btn-sm h-9 min-h-9 flex-1 rounded-lg border-success/35 px-3 text-success hover:bg-success/10"
+                                  onClick={() => void restorePrayer(prayer)}
+                                  disabled={prayerIsWorking || workingPrayerId !== null}
+                                >
+                                  {prayerIsWorking
+                                    ? <span className="loading loading-spinner loading-xs" />
+                                    : <ArchiveRestore aria-hidden="true" className="size-4" />}
+                                  Restaurar
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn btn-outline btn-sm h-9 min-h-9 flex-1 rounded-lg border-error/35 px-3 text-error hover:bg-error/10"
+                                  onClick={() => void deletePrayer(prayer)}
+                                  disabled={prayerIsWorking || workingPrayerId !== null}
+                                >
+                                  <Trash2 aria-hidden="true" className="size-4" />
+                                  Eliminar definitivamente
+                                </button>
+                              </div>
+                            </article>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-dashed border-base-300 bg-base-200/40 px-5 py-7 text-center">
+                        <EyeOff aria-hidden="true" className="mx-auto mb-2 size-7 text-base-content/30" />
+                        <p className="text-sm font-semibold">No hay peticiones ocultas.</p>
+                      </div>
+                    )}
+                  </section>
+                </>
               )}
 
               {error && <p className="text-sm font-medium text-error" role="alert">{error}</p>}
+              {success && <p className="text-sm font-semibold text-success" role="status">{success}</p>}
             </div>
 
             <DialogFooter className="shrink-0 border-t border-base-300 bg-base-200/45 p-5 sm:justify-between">
@@ -398,6 +615,7 @@ export function SuggestionMailboxDialog({
                 onClick={() => {
                   setView("submit");
                   setError("");
+                  setSuccess("");
                 }}
               >
                 <MessageSquareText aria-hidden="true" />

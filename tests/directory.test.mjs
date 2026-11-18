@@ -203,7 +203,6 @@ test("manages general requests with search, statuses, and soft hiding", async ()
     storage,
     /export async function hideGeneralPrayer\(\s*prayer: GeneralPrayer/,
   );
-  assert.doesNotMatch(storage, /Authorization:/);
   assert.match(storage, /fieldPath: "hiddenAt"/);
   assert.match(storage, /prayer\.hiddenAt === null/);
   assert.doesNotMatch(generalPrayerRules, /allow update:\s*if isPrayerAdmin\(\)/);
@@ -219,7 +218,11 @@ test("manages general requests with search, statuses, and soft hiding", async ()
     generalPrayerRules,
     /request\.resource\.data\.hiddenAt == request\.time/,
   );
-  assert.match(generalPrayerRules, /allow delete:\s*if false/);
+  assert.match(generalPrayerRules, /allow delete:\s*if isPrayerAdmin\(\)/);
+  assert.match(
+    generalPrayerRules,
+    /resource\.data\.get\("hiddenAt", null\) is timestamp/,
+  );
 });
 
 test("accepts suggestions publicly but protects the administrative inbox", async () => {
@@ -252,6 +255,43 @@ test("accepts suggestions publicly but protects the administrative inbox", async
   assert.match(suggestionRules, /allow create:\s*if hasValidSuggestionFields\(\)/);
   assert.match(suggestionRules, /allow read:\s*if isPrayerAdmin\(\)/);
   assert.match(suggestionRules, /allow update, delete:\s*if false/);
+});
+
+test("restores or permanently deletes hidden general requests from the admin inbox", async () => {
+  const page = await readFile(
+    new URL("../app/page.tsx", import.meta.url),
+    "utf8",
+  );
+  const dialog = await readFile(
+    new URL("../components/suggestion-mailbox-dialog.tsx", import.meta.url),
+    "utf8",
+  );
+  const storage = await readFile(
+    new URL("../lib/general-prayers.ts", import.meta.url),
+    "utf8",
+  );
+  const rules = await readFile(
+    new URL("../firestore.rules", import.meta.url),
+    "utf8",
+  );
+  const generalPrayerRules = rules.match(
+    /match \/generalPrayers\/\{generalPrayerId\} \{[\s\S]*?\n    \}/,
+  )?.[0] ?? "";
+
+  assert.match(page, /onGeneralPrayersChange=\{setGeneralPrayers\}/);
+  assert.match(dialog, /Peticiones ocultas/);
+  assert.match(dialog, /listHiddenGeneralPrayers/);
+  assert.match(dialog, /restoreGeneralPrayer/);
+  assert.match(dialog, /deleteGeneralPrayerPermanently/);
+  assert.match(dialog, /Restaurar/);
+  assert.match(dialog, /Eliminar definitivamente/);
+  assert.match(dialog, /window\.confirm/);
+  assert.match(storage, /export async function listHiddenGeneralPrayers/);
+  assert.match(storage, /export async function restoreGeneralPrayer/);
+  assert.match(storage, /export async function deleteGeneralPrayerPermanently/);
+  assert.match(generalPrayerRules, /isPrayerAdmin\(\)/);
+  assert.match(generalPrayerRules, /request\.resource\.data\.hiddenAt == null/);
+  assert.match(generalPrayerRules, /allow delete:\s*if isPrayerAdmin\(\)/);
 });
 
 test("stores prayer status, its automatic date, and renders status colors", async () => {

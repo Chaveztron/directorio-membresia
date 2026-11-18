@@ -649,6 +649,7 @@ export default function Home() {
         open={suggestionDialogOpen}
         session={prayerSession}
         onOpenChange={setSuggestionDialogOpen}
+        onGeneralPrayersChange={setGeneralPrayers}
         onSessionChange={setPrayerSession}
       />
     </main>

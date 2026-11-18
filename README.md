@@ -139,7 +139,8 @@ Después haz `git push`. El flujo de GitHub Actions incluirá la configuración 
 - En la edición de cada oración, **✅ Cumplida** y **❌ No cumplida** asignan automáticamente la fecha del cambio y muestran la petición en verde o rojo. **↺ Limpiar estado** elimina ambos valores y restaura el color normal. Los cambios se confirman con **Guardar cambios**.
 - Después de desbloquear el directorio aparece **Buzón de sugerencias**. Cualquier persona con acceso puede enviar un mensaje anónimo.
 - **Consultar buzón** solicita la misma contraseña administrativa de Firebase utilizada para administrar las oraciones. Si esa sesión ya está activa, se reutiliza.
-- Las sugerencias se guardan en la colección `suggestions`; únicamente la cuenta administrativa puede leerlas y la bandeja es de solo consulta.
+- Las sugerencias se guardan en la colección `suggestions`; únicamente la cuenta administrativa puede leerlas y los mensajes son de solo consulta.
+- La bandeja administrativa incluye una sección **Peticiones ocultas**. Desde ahí se puede restaurar una petición conservando su contenido, estado y fechas, o eliminarla definitivamente de Firestore después de confirmar la acción.
 - Al ocultar nuevamente la información del directorio también se cierra la sesión administrativa.
 
 Después de instalar esta actualización en un proyecto que ya estaba publicado, vuelve a copiar el contenido completo de `firestore.rules` en **Firebase Console → Firestore Database → Rules** y pulsa **Publish**. No necesitas crear variables nuevas en GitHub.
@@ -147,5 +148,7 @@ Después de instalar esta actualización en un proyecto que ya estaba publicado,
 > Importante: las reglas permiten leer la colección `prayers` sin autenticación para ofrecer esta consulta. La interfaz solo muestra el botón después de desbloquear el directorio, pero los textos deben considerarse información públicamente legible desde la API de Firestore. No almacenes peticiones confidenciales con esta modalidad.
 
 > **Seguridad de las peticiones generales:** cualquier persona que conozca el enlace puede crear documentos en `generalPrayers`. Además, para permitir los controles sin sesión administrativa, las reglas aceptan actualizaciones públicas limitadas exclusivamente a `status`, `statusChangedAt` y `hiddenAt`; el tema, texto, categoría y fecha original permanecen inmutables. Esta restricción protege el contenido, pero alguien con acceso directo a la API también podría cambiar estados u ocultar peticiones sin usar la interfaz. Para un control de acceso estricto se necesitaría Firebase Authentication, App Check o una función de servidor.
+
+> La restauración y la eliminación definitiva de una petición oculta sí requieren la cuenta administrativa de Firebase. Las reglas solo permiten eliminar documentos que ya tengan una fecha `hiddenAt`.
 
 > **Seguridad del buzón:** como GitHub Pages es estático, Firestore debe permitir la creación anónima en `suggestions`. El botón solo aparece después de desbloquear la interfaz, pero alguien que conozca la API podría intentar enviar mensajes directamente. Las reglas limitan los campos y el tamaño a 2000 caracteres; para protección estricta contra abuso se necesitaría Firebase App Check o una función de servidor.

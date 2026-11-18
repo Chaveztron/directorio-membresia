@@ -62,6 +62,7 @@ async function firebaseRequest(
   url: string,
   init: RequestInit,
   fallbackMessage: string,
+  requiresAdmin = false,
 ) {
   const response = await fetch(url, init);
   if (!response.ok) {
@@ -74,9 +75,9 @@ async function firebaseRequest(
     }
 
     if (response.status === 401) {
-      throw new Error(
-        "Firebase rechazó las credenciales del proyecto. Revisa la configuración.",
-      );
+      throw new Error(requiresAdmin
+        ? "La sesión administrativa venció. Inicia sesión nuevamente."
+        : "Firebase rechazó las credenciales del proyecto. Revisa la configuración.");
     }
 
     throw new Error(`${fallbackMessage} (${detail})`);
@@ -190,7 +191,16 @@ export async function createGeneralPrayer(input: {
   };
 }
 
-export async function listGeneralPrayers(): Promise<GeneralPrayer[]> {
+function requestHeaders(idToken?: string) {
+  return {
+    ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+    "Content-Type": "application/json",
+  };
+}
+
+async function listGeneralPrayerDocuments(
+  idToken?: string,
+): Promise<GeneralPrayer[]> {
   requireConfiguration();
 
   const prayers: GeneralPrayer[] = [];
@@ -205,8 +215,9 @@ export async function listGeneralPrayers(): Promise<GeneralPrayer[]> {
 
     const payload = await firebaseRequest(
       `${firestoreBaseUrl()}/generalPrayers?${parameters.toString()}`,
-      { headers: { "Content-Type": "application/json" } },
+      { headers: requestHeaders(idToken) },
       "No fue posible cargar las peticiones generales.",
+      Boolean(idToken),
     ) as {
       documents?: FirestoreDocument[];
       nextPageToken?: string;
@@ -215,14 +226,24 @@ export async function listGeneralPrayers(): Promise<GeneralPrayer[]> {
     prayers.push(
       ...(payload.documents ?? [])
         .map(parseGeneralPrayer)
-        .filter((prayer): prayer is GeneralPrayer => (
-          prayer !== null && prayer.hiddenAt === null
-        )),
+        .filter((prayer): prayer is GeneralPrayer => prayer !== null),
     );
     pageToken = payload.nextPageToken ?? "";
   } while (pageToken);
 
   return prayers;
+}
+
+export async function listGeneralPrayers(): Promise<GeneralPrayer[]> {
+  return (await listGeneralPrayerDocuments())
+    .filter((prayer) => prayer.hiddenAt === null);
+}
+
+export async function listHiddenGeneralPrayers(
+  idToken: string,
+): Promise<GeneralPrayer[]> {
+  return (await listGeneralPrayerDocuments(idToken))
+    .filter((prayer) => prayer.hiddenAt !== null);
 }
 
 function documentName(prayerId: string) {
@@ -237,6 +258,7 @@ async function commitGeneralPrayerUpdate(
     setToServerValue: "REQUEST_TIME";
   }[],
   fallbackMessage: string,
+  idToken?: string,
 ) {
   requireConfiguration();
 
@@ -244,7 +266,7 @@ async function commitGeneralPrayerUpdate(
     `${firestoreBaseUrl()}:commit`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: requestHeaders(idToken),
       body: JSON.stringify({
         writes: [{
           update: {
@@ -257,6 +279,7 @@ async function commitGeneralPrayerUpdate(
       }),
     },
     fallbackMessage,
+    Boolean(idToken),
   );
 }
 
@@ -322,5 +345,44 @@ export async function hideGeneralPrayer(
       setToServerValue: "REQUEST_TIME",
     }],
     "No fue posible ocultar la petición.",
+  );
+}
+
+export async function restoreGeneralPrayer(
+  idToken: string,
+  prayer: GeneralPrayer,
+) {
+  const fields = preservedFields(prayer);
+  fields.hiddenAt = { nullValue: null };
+
+  await commitGeneralPrayerUpdate(
+    prayer.id,
+    fields,
+    [],
+    "No fue posible restaurar la petición.",
+    idToken,
+  );
+}
+
+export async function deleteGeneralPrayerPermanently(
+  idToken: string,
+  prayerId: string,
+) {
+  requireConfiguration();
+
+  await firebaseRequest(
+    `${firestoreBaseUrl()}:commit`,
+    {
+      method: "POST",
+      headers: requestHeaders(idToken),
+      body: JSON.stringify({
+        writes: [{
+          delete: documentName(prayerId),
+          currentDocument: { exists: true },
+        }],
+      }),
+    },
+    "No fue posible eliminar definitivamente la petición.",
+    true,
   );
 }
