@@ -25,6 +25,43 @@ test("renders only the member count while the directory is locked", async () => 
   assert.doesNotMatch(html, /Buzón de sugerencias/);
 });
 
+test("publishes a mobile public form for general prayer requests", async () => {
+  const html = await readFile(
+    new URL("../dist/client/nueva-peticion/index.html", import.meta.url),
+    "utf8",
+  );
+  const page = await readFile(
+    new URL("../app/nueva-peticion/page.tsx", import.meta.url),
+    "utf8",
+  );
+  const storage = await readFile(
+    new URL("../lib/general-prayers.ts", import.meta.url),
+    "utf8",
+  );
+  const rules = await readFile(
+    new URL("../firestore.rules", import.meta.url),
+    "utf8",
+  );
+  const generalPrayerRules = rules.match(
+    /match \/generalPrayers\/\{generalPrayerId\} \{[\s\S]*?\n    \}/,
+  )?.[0] ?? "";
+
+  assert.match(html, /<title>Nueva petición de oración<\/title>/);
+  assert.match(html, /Oraciones en general/);
+  assert.match(html, /Nombre de la persona o tema/);
+  assert.match(html, /Oración/);
+  assert.match(html, /Iglesia en general/);
+  assert.match(html, /Enviar petición/);
+  assert.doesNotMatch(html, /type="password"/);
+  assert.match(page, /min-h-\[100dvh\]/);
+  assert.match(page, /¿Deseas agregar otra petición\?/);
+  assert.match(storage, /setToServerValue: "REQUEST_TIME"/);
+  assert.match(storage, /generalPrayers/);
+  assert.match(generalPrayerRules, /allow create:\s*if hasValidGeneralPrayerFields\(\)/);
+  assert.match(generalPrayerRules, /allow read:\s*if true/);
+  assert.match(rules, /request\.resource\.data\.createdAt == request\.time/);
+});
+
 test("reveals the complete directory only after unlocking", async () => {
   const source = await readFile(
     new URL("../app/page.tsx", import.meta.url),
@@ -107,9 +144,11 @@ test("includes a read-only tab with every prayer grouped by member", async () =>
 
   assert.match(source, /Todas las oraciones/);
   assert.match(source, /activeView === "prayers"/);
-  assert.match(source, /Consulta las peticiones agrupadas por miembro/);
+  assert.match(source, /Consulta las peticiones generales y las agrupadas por miembro/);
   assert.match(source, /prayer\.contactId === contact\.id/);
   assert.match(source, /role="tabpanel"/);
+  assert.match(source, /Oraciones en general/);
+  assert.match(source, /listGeneralPrayers/);
 });
 
 test("accepts suggestions publicly but protects the administrative inbox", async () => {

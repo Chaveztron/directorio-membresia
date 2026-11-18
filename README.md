@@ -122,6 +122,10 @@ Después haz `git push`. El flujo de GitHub Actions incluirá la configuración 
 
 ### Funcionamiento
 
+- El enlace público `https://chaveztron.github.io/directorio-membresia/nueva-peticion/` permite enviar una petición sin contraseña desde un teléfono o computadora.
+- El formulario solicita el nombre de la persona o tema, un texto opcional y la categoría **Petición** o **Iglesia en general**. Firebase registra automáticamente la fecha y hora del servidor.
+- Después de guardar, la persona puede limpiar el formulario para agregar otra petición o regresar al directorio.
+- Las peticiones recibidas por ese enlace se guardan en la colección `generalPrayers` y aparecen en **Todas las oraciones → Oraciones en general** después de desbloquear el directorio.
 - Los botones de oraciones solo aparecen cuando la información del directorio está desbloqueada.
 - Cada tarjeta con registros muestra **Ver oraciones (n)** sin solicitar la contraseña administrativa.
 - La pestaña **Todas las oraciones** reúne las peticiones de todos los miembros en una sola vista de consulta, agrupadas por nombre.
@@ -137,5 +141,7 @@ Después haz `git push`. El flujo de GitHub Actions incluirá la configuración 
 Después de instalar esta actualización en un proyecto que ya estaba publicado, vuelve a copiar el contenido completo de `firestore.rules` en **Firebase Console → Firestore Database → Rules** y pulsa **Publish**. No necesitas crear variables nuevas en GitHub.
 
 > Importante: las reglas permiten leer la colección `prayers` sin autenticación para ofrecer esta consulta. La interfaz solo muestra el botón después de desbloquear el directorio, pero los textos deben considerarse información públicamente legible desde la API de Firestore. No almacenes peticiones confidenciales con esta modalidad.
+
+> **Seguridad del formulario público:** cualquier persona que conozca el enlace puede crear documentos en `generalPrayers`, tal como requiere el formulario. Las reglas restringen los campos, categorías y longitudes, pero GitHub Pages no puede impedir por sí solo los envíos automatizados. Las peticiones generales también se consideran públicamente legibles desde la API para poder mostrarlas en la vista de consulta. Para protección adicional contra abuso se puede habilitar Firebase App Check o usar una función de servidor.
 
 > **Seguridad del buzón:** como GitHub Pages es estático, Firestore debe permitir la creación anónima en `suggestions`. El botón solo aparece después de desbloquear la interfaz, pero alguien que conozca la API podría intentar enviar mensajes directamente. Las reglas limitan los campos y el tamaño a 2000 caracteres; para protección estricta contra abuso se necesitaría Firebase App Check o una función de servidor.

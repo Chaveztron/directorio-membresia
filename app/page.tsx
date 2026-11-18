@@ -35,6 +35,11 @@ import {
   listPrayers,
 } from "@/lib/prayers";
 import type { Prayer, PrayerAdminSession, PrayerStatus } from "@/lib/prayers";
+import {
+  isGeneralPrayerStorageConfigured,
+  listGeneralPrayers,
+} from "@/lib/general-prayers";
+import type { GeneralPrayer } from "@/lib/general-prayers";
 
 type SensitiveInfo = {
   nombreCompleto?: string;
@@ -126,6 +131,9 @@ export default function Home() {
     useState<PrayerAdminSession | null>(null);
   const [prayers, setPrayers] = useState<Prayer[] | null>(null);
   const [prayerLoadError, setPrayerLoadError] = useState("");
+  const [generalPrayers, setGeneralPrayers] =
+    useState<GeneralPrayer[] | null>(null);
+  const [generalPrayerLoadError, setGeneralPrayerLoadError] = useState("");
   const [prayerDialog, setPrayerDialog] =
     useState<PrayerDialogState | null>(null);
   const [suggestionDialogOpen, setSuggestionDialogOpen] = useState(false);
@@ -169,6 +177,30 @@ export default function Home() {
     };
   }, [isUnlocked]);
 
+  useEffect(() => {
+    if (!isUnlocked || !isGeneralPrayerStorageConfigured) return;
+
+    let cancelled = false;
+
+    void listGeneralPrayers()
+      .then((nextPrayers) => {
+        if (!cancelled) setGeneralPrayers(nextPrayers);
+      })
+      .catch((reason) => {
+        if (cancelled) return;
+        setGeneralPrayers([]);
+        setGeneralPrayerLoadError(
+          reason instanceof Error
+            ? reason.message
+            : "No fue posible cargar las peticiones generales.",
+        );
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isUnlocked]);
+
   const prayerCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const prayer of prayers ?? []) {
@@ -184,6 +216,8 @@ export default function Home() {
     setPrayerSession(null);
     setPrayers(null);
     setPrayerLoadError("");
+    setGeneralPrayers(null);
+    setGeneralPrayerLoadError("");
     setPrayerDialog(null);
     setSuggestionDialogOpen(false);
     setPassword("");
@@ -368,7 +402,8 @@ export default function Home() {
           >
             <BookHeart aria-hidden="true" className="size-4" />
             Todas las oraciones
-            {prayers !== null && prayers.length > 0 && (
+            {(prayers !== null || generalPrayers !== null)
+              && (prayers?.length ?? 0) + (generalPrayers?.length ?? 0) > 0 && (
               <span
                 className={`rounded-full px-2 py-0.5 text-[0.68rem] leading-none ${
                   activeView === "prayers"
@@ -376,7 +411,7 @@ export default function Home() {
                     : "bg-primary/10 text-primary"
                 }`}
               >
-                {prayers.length}
+                {(prayers?.length ?? 0) + (generalPrayers?.length ?? 0)}
               </span>
             )}
           </button>
@@ -553,6 +588,8 @@ export default function Home() {
           <AllPrayersView
             directory={sensitiveDirectory}
             error={prayerLoadError}
+            generalError={generalPrayerLoadError}
+            generalPrayers={generalPrayers}
             prayers={prayers}
           />
         )}
@@ -593,6 +630,16 @@ function formatPrayerDate(value: string) {
   }).format(date);
 }
 
+function formatPrayerDateTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Fecha no disponible";
+
+  return new Intl.DateTimeFormat("es-MX", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
 function prayerOverviewClass(status: PrayerStatus | null) {
   if (status === "fulfilled") {
     return "border-success/35 bg-success/8";
@@ -603,9 +650,17 @@ function prayerOverviewClass(status: PrayerStatus | null) {
   return "border-base-300 bg-base-200/30";
 }
 
-function AllPrayersView({ directory, error, prayers }: {
+function AllPrayersView({
+  directory,
+  error,
+  generalError,
+  generalPrayers,
+  prayers,
+}: {
   directory: SensitiveDirectory;
   error: string;
+  generalError: string;
+  generalPrayers: GeneralPrayer[] | null;
   prayers: Prayer[] | null;
 }) {
   const groups = useMemo(() => {
@@ -626,6 +681,9 @@ function AllPrayersView({ directory, error, prayers }: {
     }).sort((left, right) => left.name.localeCompare(right.name, "es-MX"));
   }, [directory, prayers]);
 
+  const totalPrayers = (prayers?.length ?? 0) + (generalPrayers?.length ?? 0);
+  const allLoaded = prayers !== null && generalPrayers !== null;
+
   return (
     <section
       id="prayers-panel"
@@ -644,17 +702,23 @@ function AllPrayersView({ directory, error, prayers }: {
                 Todas las oraciones
               </h2>
               <p className="mt-0.5 text-sm text-base-content/60">
-                Consulta las peticiones agrupadas por miembro.
+                Consulta las peticiones generales y las agrupadas por miembro.
               </p>
             </div>
           </div>
 
-          {prayers !== null && !error && (
-            <div className="flex gap-2 text-center">
+          {allLoaded && !error && !generalError && (
+            <div className="flex flex-wrap gap-2 text-center">
               <div className="min-w-20 rounded-xl border border-primary/15 bg-base-100/80 px-3 py-2 shadow-sm">
-                <p className="text-xl font-bold text-primary">{prayers.length}</p>
+                <p className="text-xl font-bold text-primary">{totalPrayers}</p>
                 <p className="text-[0.68rem] font-bold uppercase tracking-wide text-base-content/50">
                   Oraciones
+                </p>
+              </div>
+              <div className="min-w-20 rounded-xl border border-primary/15 bg-base-100/80 px-3 py-2 shadow-sm">
+                <p className="text-xl font-bold text-primary">{generalPrayers.length}</p>
+                <p className="text-[0.68rem] font-bold uppercase tracking-wide text-base-content/50">
+                  Generales
                 </p>
               </div>
               <div className="min-w-20 rounded-xl border border-primary/15 bg-base-100/80 px-3 py-2 shadow-sm">
@@ -668,18 +732,108 @@ function AllPrayersView({ directory, error, prayers }: {
         </div>
       </div>
 
+      <section className="mb-6" aria-labelledby="general-prayers-title">
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-2 px-1">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
+              Peticiones recibidas por el enlace público
+            </p>
+            <h3 id="general-prayers-title" className="mt-0.5 text-lg font-bold">
+              Oraciones en general
+            </h3>
+          </div>
+          {generalPrayers !== null && !generalError && (
+            <span className="rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-xs font-bold text-primary">
+              {generalPrayers.length === 1
+                ? "1 petición"
+                : `${generalPrayers.length} peticiones`}
+            </span>
+          )}
+        </div>
+
+        {!isGeneralPrayerStorageConfigured ? (
+          <div className="rounded-2xl border border-warning/30 bg-warning/10 px-6 py-8 text-center">
+            <BookHeart aria-hidden="true" className="mx-auto mb-3 size-9 text-warning-content/60" />
+            <h4 className="font-bold">Firebase todavía no está configurado</h4>
+            <p className="mx-auto mt-1 max-w-lg text-sm text-base-content/60">
+              Agrega las variables de Firebase para cargar las peticiones generales.
+            </p>
+          </div>
+        ) : generalError ? (
+          <div className="rounded-2xl border border-error/20 bg-error/5 px-6 py-8 text-center text-error" role="alert">
+            <BookHeart aria-hidden="true" className="mx-auto mb-3 size-9 opacity-60" />
+            <h4 className="font-bold">No fue posible cargar las peticiones generales</h4>
+            <p className="mx-auto mt-1 max-w-lg text-sm">{generalError}</p>
+          </div>
+        ) : generalPrayers === null ? (
+          <div className="rounded-2xl border border-dashed border-base-300 bg-base-100 px-6 py-9 text-center">
+            <span className="loading loading-spinner loading-md text-primary" />
+            <p className="mt-3 text-sm font-semibold text-base-content/65">
+              Cargando peticiones generales…
+            </p>
+          </div>
+        ) : generalPrayers.length > 0 ? (
+          <div className="grid items-start gap-3 md:grid-cols-2">
+            {generalPrayers.map((prayer) => (
+              <article
+                key={prayer.id}
+                className="rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm sm:p-5"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <h4 className="min-w-0 flex-1 break-words font-bold text-base-content">
+                    {prayer.subject}
+                  </h4>
+                  <span className="shrink-0 rounded-full border border-primary/15 bg-primary/5 px-2.5 py-1 text-[0.68rem] font-bold text-primary">
+                    {prayer.type === "church" ? "Iglesia en general" : "Petición"}
+                  </span>
+                </div>
+                {prayer.text && (
+                  <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-base-content/75">
+                    {prayer.text}
+                  </p>
+                )}
+                <time
+                  dateTime={prayer.createdAt}
+                  className="mt-3 block border-t border-base-300/70 pt-3 text-[0.7rem] font-semibold text-base-content/45"
+                >
+                  Registrada: {formatPrayerDateTime(prayer.createdAt)}
+                </time>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-base-300 bg-base-100 px-6 py-9 text-center">
+            <BookHeart aria-hidden="true" className="mx-auto mb-3 size-9 text-base-content/25" />
+            <h4 className="font-bold">Todavía no hay peticiones generales</h4>
+            <p className="mt-1 text-sm text-base-content/60">
+              Las peticiones enviadas desde el formulario público aparecerán aquí.
+            </p>
+          </div>
+        )}
+      </section>
+
+      <section aria-labelledby="member-prayers-title">
+        <div className="mb-3 px-1">
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
+            Directorio
+          </p>
+          <h3 id="member-prayers-title" className="mt-0.5 text-lg font-bold">
+            Oraciones por miembro
+          </h3>
+        </div>
+
       {!isPrayerStorageConfigured ? (
-        <div className="rounded-2xl border border-warning/30 bg-warning/10 px-6 py-10 text-center">
+        <div className="rounded-2xl border border-warning/30 bg-warning/10 px-6 py-8 text-center">
           <BookHeart aria-hidden="true" className="mx-auto mb-3 size-9 text-warning-content/60" />
-          <h3 className="font-bold">Firebase todavía no está configurado</h3>
+          <h4 className="font-bold">Firebase todavía no está configurado</h4>
           <p className="mx-auto mt-1 max-w-lg text-sm text-base-content/60">
             Agrega las variables de Firebase para cargar la lista de oraciones.
           </p>
         </div>
       ) : error ? (
-        <div className="rounded-2xl border border-error/20 bg-error/5 px-6 py-10 text-center text-error" role="alert">
+        <div className="rounded-2xl border border-error/20 bg-error/5 px-6 py-8 text-center text-error" role="alert">
           <BookHeart aria-hidden="true" className="mx-auto mb-3 size-9 opacity-60" />
-          <h3 className="font-bold">No fue posible cargar las oraciones</h3>
+          <h4 className="font-bold">No fue posible cargar las oraciones</h4>
           <p className="mx-auto mt-1 max-w-lg text-sm">{error}</p>
         </div>
       ) : prayers === null ? (
@@ -755,12 +909,13 @@ function AllPrayersView({ directory, error, prayers }: {
       ) : (
         <div className="rounded-2xl border border-dashed border-base-300 bg-base-100 px-6 py-14 text-center">
           <BookHeart aria-hidden="true" className="mx-auto mb-3 size-10 text-base-content/25" />
-          <h3 className="text-lg font-bold">Todavía no hay oraciones</h3>
+          <h4 className="text-lg font-bold">Todavía no hay oraciones</h4>
           <p className="mt-1 text-sm text-base-content/60">
             Cuando se agregue la primera petición aparecerá en esta sección.
           </p>
         </div>
       )}
+      </section>
     </section>
   );
 }
