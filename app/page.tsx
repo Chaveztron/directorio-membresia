@@ -54,7 +54,7 @@ type SensitiveInfo = {
 
 type SensitiveDirectory = Record<string, SensitiveInfo>;
 
-type DirectoryView = "directory" | "prayers";
+type DirectoryView = "directory" | "prayers" | "general-prayers";
 
 type PrayerDialogState = {
   contact: {
@@ -368,7 +368,7 @@ export default function Home() {
 
         <nav
           aria-label="Secciones del directorio"
-          className="mb-5 flex w-full gap-1 rounded-2xl border border-base-300 bg-base-100 p-1.5 shadow-sm sm:w-fit"
+          className="mb-5 grid w-full grid-cols-3 gap-1 rounded-2xl border border-base-300 bg-base-100 p-1.5 shadow-sm sm:flex sm:w-fit"
           role="tablist"
         >
           <button
@@ -377,7 +377,7 @@ export default function Home() {
             role="tab"
             aria-selected={activeView === "directory"}
             aria-controls="directory-panel"
-            className={`flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold transition-colors sm:flex-none ${
+            className={`flex min-h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-bold transition-colors sm:flex-none sm:gap-2 sm:px-4 sm:text-sm ${
               activeView === "directory"
                 ? "bg-primary text-primary-content shadow-sm"
                 : "text-base-content/60 hover:bg-base-200 hover:text-base-content"
@@ -393,7 +393,7 @@ export default function Home() {
             role="tab"
             aria-selected={activeView === "prayers"}
             aria-controls="prayers-panel"
-            className={`flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold transition-colors sm:flex-none ${
+            className={`flex min-h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-bold transition-colors sm:flex-none sm:gap-2 sm:px-4 sm:text-sm ${
               activeView === "prayers"
                 ? "bg-primary text-primary-content shadow-sm"
                 : "text-base-content/60 hover:bg-base-200 hover:text-base-content"
@@ -401,9 +401,9 @@ export default function Home() {
             onClick={() => setActiveView("prayers")}
           >
             <BookHeart aria-hidden="true" className="size-4" />
-            Todas las oraciones
-            {(prayers !== null || generalPrayers !== null)
-              && (prayers?.length ?? 0) + (generalPrayers?.length ?? 0) > 0 && (
+            <span className="sm:hidden">Por miembro</span>
+            <span className="hidden sm:inline">Todas las oraciones</span>
+            {prayers !== null && prayers.length > 0 && (
               <span
                 className={`rounded-full px-2 py-0.5 text-[0.68rem] leading-none ${
                   activeView === "prayers"
@@ -411,7 +411,35 @@ export default function Home() {
                     : "bg-primary/10 text-primary"
                 }`}
               >
-                {(prayers?.length ?? 0) + (generalPrayers?.length ?? 0)}
+                {prayers.length}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            id="general-prayers-tab"
+            role="tab"
+            aria-selected={activeView === "general-prayers"}
+            aria-controls="general-prayers-panel"
+            className={`flex min-h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-bold transition-colors sm:flex-none sm:gap-2 sm:px-4 sm:text-sm ${
+              activeView === "general-prayers"
+                ? "bg-primary text-primary-content shadow-sm"
+                : "text-base-content/60 hover:bg-base-200 hover:text-base-content"
+            }`}
+            onClick={() => setActiveView("general-prayers")}
+          >
+            <HeartHandshake aria-hidden="true" className="size-4" />
+            <span className="sm:hidden">Generales</span>
+            <span className="hidden sm:inline">Peticiones generales</span>
+            {generalPrayers !== null && generalPrayers.length > 0 && (
+              <span
+                className={`rounded-full px-2 py-0.5 text-[0.68rem] leading-none ${
+                  activeView === "general-prayers"
+                    ? "bg-white/20 text-white"
+                    : "bg-primary/10 text-primary"
+                }`}
+              >
+                {generalPrayers.length}
               </span>
             )}
           </button>
@@ -584,13 +612,23 @@ export default function Home() {
               </section>
             )}
           </div>
-        ) : (
+        ) : activeView === "prayers" ? (
           <AllPrayersView
             directory={sensitiveDirectory}
             error={prayerLoadError}
+            generalError=""
+            generalPrayers={null}
+            prayers={prayers}
+            view="members"
+          />
+        ) : (
+          <AllPrayersView
+            directory={sensitiveDirectory}
+            error=""
             generalError={generalPrayerLoadError}
             generalPrayers={generalPrayers}
-            prayers={prayers}
+            prayers={null}
+            view="general"
           />
         )}
       </div>
@@ -656,12 +694,14 @@ function AllPrayersView({
   generalError,
   generalPrayers,
   prayers,
+  view,
 }: {
   directory: SensitiveDirectory;
   error: string;
   generalError: string;
   generalPrayers: GeneralPrayer[] | null;
   prayers: Prayer[] | null;
+  view: "members" | "general";
 }) {
   const groups = useMemo(() => {
     if (!prayers) return [];
@@ -681,58 +721,64 @@ function AllPrayersView({
     }).sort((left, right) => left.name.localeCompare(right.name, "es-MX"));
   }, [directory, prayers]);
 
-  const totalPrayers = (prayers?.length ?? 0) + (generalPrayers?.length ?? 0);
-  const allLoaded = prayers !== null && generalPrayers !== null;
+  const showingGeneral = view === "general";
+  const activeCollectionLoaded = showingGeneral
+    ? generalPrayers !== null
+    : prayers !== null;
+  const activeCollectionError = showingGeneral ? generalError : error;
 
   return (
     <section
-      id="prayers-panel"
+      id={showingGeneral ? "general-prayers-panel" : "prayers-panel"}
       role="tabpanel"
-      aria-labelledby="prayers-tab"
+      aria-labelledby={showingGeneral ? "general-prayers-tab" : "prayers-tab"}
       aria-live="polite"
     >
       <div className="mb-5 overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/10 via-base-100 to-sky-50 shadow-sm">
         <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <div className="flex items-center gap-3.5">
             <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-primary text-primary-content shadow-sm">
-              <BookHeart aria-hidden="true" className="size-6" />
+              {showingGeneral
+                ? <HeartHandshake aria-hidden="true" className="size-6" />
+                : <BookHeart aria-hidden="true" className="size-6" />}
             </div>
             <div>
               <h2 className="text-xl font-bold tracking-tight sm:text-2xl">
-                Todas las oraciones
+                {showingGeneral ? "Peticiones generales" : "Todas las oraciones"}
               </h2>
               <p className="mt-0.5 text-sm text-base-content/60">
-                Consulta las peticiones generales y las agrupadas por miembro.
+                {showingGeneral
+                  ? "Consulta las peticiones recibidas desde el enlace público."
+                  : "Consulta las peticiones agrupadas por miembro."}
               </p>
             </div>
           </div>
 
-          {allLoaded && !error && !generalError && (
+          {activeCollectionLoaded && !activeCollectionError && (
             <div className="flex flex-wrap gap-2 text-center">
               <div className="min-w-20 rounded-xl border border-primary/15 bg-base-100/80 px-3 py-2 shadow-sm">
-                <p className="text-xl font-bold text-primary">{totalPrayers}</p>
+                <p className="text-xl font-bold text-primary">
+                  {showingGeneral ? generalPrayers?.length : prayers?.length}
+                </p>
                 <p className="text-[0.68rem] font-bold uppercase tracking-wide text-base-content/50">
-                  Oraciones
+                  {showingGeneral ? "Generales" : "Oraciones"}
                 </p>
               </div>
-              <div className="min-w-20 rounded-xl border border-primary/15 bg-base-100/80 px-3 py-2 shadow-sm">
-                <p className="text-xl font-bold text-primary">{generalPrayers.length}</p>
-                <p className="text-[0.68rem] font-bold uppercase tracking-wide text-base-content/50">
-                  Generales
-                </p>
-              </div>
-              <div className="min-w-20 rounded-xl border border-primary/15 bg-base-100/80 px-3 py-2 shadow-sm">
-                <p className="text-xl font-bold text-primary">{groups.length}</p>
-                <p className="text-[0.68rem] font-bold uppercase tracking-wide text-base-content/50">
-                  Miembros
-                </p>
-              </div>
+              {!showingGeneral && (
+                <div className="min-w-20 rounded-xl border border-primary/15 bg-base-100/80 px-3 py-2 shadow-sm">
+                  <p className="text-xl font-bold text-primary">{groups.length}</p>
+                  <p className="text-[0.68rem] font-bold uppercase tracking-wide text-base-content/50">
+                    Miembros
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
 
-      <section className="mb-6" aria-labelledby="general-prayers-title">
+      {showingGeneral && (
+      <section aria-labelledby="general-prayers-title">
         <div className="mb-3 flex flex-wrap items-end justify-between gap-2 px-1">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
@@ -811,7 +857,9 @@ function AllPrayersView({
           </div>
         )}
       </section>
+      )}
 
+      {!showingGeneral && (
       <section aria-labelledby="member-prayers-title">
         <div className="mb-3 px-1">
           <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
@@ -916,6 +964,7 @@ function AllPrayersView({
         </div>
       )}
       </section>
+      )}
     </section>
   );
 }

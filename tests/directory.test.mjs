@@ -144,11 +144,26 @@ test("includes a read-only tab with every prayer grouped by member", async () =>
 
   assert.match(source, /Todas las oraciones/);
   assert.match(source, /activeView === "prayers"/);
-  assert.match(source, /Consulta las peticiones generales y las agrupadas por miembro/);
+  assert.match(source, /Consulta las peticiones agrupadas por miembro/);
   assert.match(source, /prayer\.contactId === contact\.id/);
   assert.match(source, /role="tabpanel"/);
-  assert.match(source, /Oraciones en general/);
   assert.match(source, /listGeneralPrayers/);
+});
+
+test("shows public requests in a separate general-prayers tab", async () => {
+  const source = await readFile(
+    new URL("../app/page.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /type DirectoryView = "directory" \| "prayers" \| "general-prayers"/);
+  assert.match(source, /id="general-prayers-tab"/);
+  assert.match(source, /aria-controls="general-prayers-panel"/);
+  assert.match(source, /activeView === "general-prayers"/);
+  assert.match(source, /Peticiones generales/);
+  assert.match(source, /Consulta las peticiones recibidas desde el enlace público/);
+  assert.match(source, /showingGeneral &&/);
+  assert.match(source, /!showingGeneral &&/);
 });
 
 test("accepts suggestions publicly but protects the administrative inbox", async () => {
