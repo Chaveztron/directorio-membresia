@@ -23,6 +23,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
+import { GeneralPrayersView } from "@/components/general-prayers-view";
 import { PrayerManagerDialog } from "@/components/prayer-manager-dialog";
 import { SuggestionMailboxDialog } from "@/components/suggestion-mailbox-dialog";
 import { Input } from "@/components/ui/input";
@@ -622,13 +623,12 @@ export default function Home() {
             view="members"
           />
         ) : (
-          <AllPrayersView
-            directory={sensitiveDirectory}
-            error=""
-            generalError={generalPrayerLoadError}
-            generalPrayers={generalPrayers}
-            prayers={null}
-            view="general"
+          <GeneralPrayersView
+            error={generalPrayerLoadError}
+            prayers={generalPrayers}
+            session={prayerSession}
+            onPrayersChange={setGeneralPrayers}
+            onSessionChange={setPrayerSession}
           />
         )}
       </div>

@@ -1,4 +1,5 @@
 export type GeneralPrayerType = "request" | "church";
+export type GeneralPrayerStatus = "fulfilled" | "not_fulfilled";
 
 export type GeneralPrayer = {
   id: string;
@@ -6,11 +7,15 @@ export type GeneralPrayer = {
   text: string;
   type: GeneralPrayerType;
   createdAt: string;
+  status: GeneralPrayerStatus | null;
+  statusChangedAt: string | null;
+  hiddenAt: string | null;
 };
 
 type FirestoreValue = {
   stringValue?: string;
   timestampValue?: string;
+  nullValue?: null;
 };
 
 type FirestoreDocument = {
@@ -68,6 +73,10 @@ async function firebaseRequest(
       );
     }
 
+    if (response.status === 401) {
+      throw new Error("La sesión administrativa venció. Inicia sesión nuevamente.");
+    }
+
     throw new Error(`${fallbackMessage} (${detail})`);
   }
 
@@ -81,6 +90,14 @@ function parseGeneralPrayer(document: FirestoreDocument): GeneralPrayer | null {
   const text = fields?.text?.stringValue;
   const type = fields?.type?.stringValue;
   const createdAt = fields?.createdAt?.timestampValue;
+  const statusValue = fields?.status?.stringValue;
+  const status = statusValue === "fulfilled" || statusValue === "not_fulfilled"
+    ? statusValue
+    : null;
+  const statusChangedAt = status
+    ? (fields?.statusChangedAt?.timestampValue ?? null)
+    : null;
+  const hiddenAt = fields?.hiddenAt?.timestampValue ?? null;
 
   if (
     !id
@@ -92,7 +109,16 @@ function parseGeneralPrayer(document: FirestoreDocument): GeneralPrayer | null {
     return null;
   }
 
-  return { id, subject, text, type, createdAt };
+  return {
+    id,
+    subject,
+    text,
+    type,
+    createdAt,
+    status,
+    statusChangedAt,
+    hiddenAt,
+  };
 }
 
 export async function createGeneralPrayer(input: {
@@ -123,6 +149,9 @@ export async function createGeneralPrayer(input: {
               subject: { stringValue: subject },
               text: { stringValue: text },
               type: { stringValue: input.type },
+              status: { nullValue: null },
+              statusChangedAt: { nullValue: null },
+              hiddenAt: { nullValue: null },
             },
           },
           updateTransforms: [{
@@ -153,6 +182,9 @@ export async function createGeneralPrayer(input: {
     text,
     type: input.type,
     createdAt,
+    status: null,
+    statusChangedAt: null,
+    hiddenAt: null,
   };
 }
 
@@ -181,10 +213,124 @@ export async function listGeneralPrayers(): Promise<GeneralPrayer[]> {
     prayers.push(
       ...(payload.documents ?? [])
         .map(parseGeneralPrayer)
-        .filter((prayer): prayer is GeneralPrayer => prayer !== null),
+        .filter((prayer): prayer is GeneralPrayer => (
+          prayer !== null && prayer.hiddenAt === null
+        )),
     );
     pageToken = payload.nextPageToken ?? "";
   } while (pageToken);
 
   return prayers;
+}
+
+function documentName(prayerId: string) {
+  return `projects/${firebaseConfig.projectId}/databases/(default)/documents/generalPrayers/${prayerId}`;
+}
+
+function authenticationHeaders(idToken: string) {
+  return {
+    Authorization: `Bearer ${idToken}`,
+    "Content-Type": "application/json",
+  };
+}
+
+async function commitGeneralPrayerUpdate(
+  idToken: string,
+  prayerId: string,
+  fields: Record<string, FirestoreValue>,
+  updateTransforms: {
+    fieldPath: string;
+    setToServerValue: "REQUEST_TIME";
+  }[],
+  fallbackMessage: string,
+) {
+  requireConfiguration();
+
+  await firebaseRequest(
+    `${firestoreBaseUrl()}:commit`,
+    {
+      method: "POST",
+      headers: authenticationHeaders(idToken),
+      body: JSON.stringify({
+        writes: [{
+          update: {
+            name: documentName(prayerId),
+            fields,
+          },
+          updateTransforms,
+          currentDocument: { exists: true },
+        }],
+      }),
+    },
+    fallbackMessage,
+  );
+}
+
+function preservedFields(prayer: GeneralPrayer): Record<string, FirestoreValue> {
+  return {
+    subject: { stringValue: prayer.subject },
+    text: { stringValue: prayer.text },
+    type: { stringValue: prayer.type },
+    createdAt: { timestampValue: prayer.createdAt },
+    status: prayer.status
+      ? { stringValue: prayer.status }
+      : { nullValue: null },
+    statusChangedAt: prayer.statusChangedAt
+      ? { timestampValue: prayer.statusChangedAt }
+      : { nullValue: null },
+    hiddenAt: prayer.hiddenAt
+      ? { timestampValue: prayer.hiddenAt }
+      : { nullValue: null },
+  };
+}
+
+export async function updateGeneralPrayerStatus(
+  idToken: string,
+  prayer: GeneralPrayer,
+  status: GeneralPrayerStatus | null,
+) {
+  const fields = preservedFields(prayer);
+  fields.status = status
+    ? { stringValue: status }
+    : { nullValue: null };
+
+  const updateTransforms = status
+    ? [{
+        fieldPath: "statusChangedAt",
+        setToServerValue: "REQUEST_TIME" as const,
+      }]
+    : [];
+
+  if (status) {
+    delete fields.statusChangedAt;
+  } else {
+    fields.statusChangedAt = { nullValue: null };
+  }
+
+  await commitGeneralPrayerUpdate(
+    idToken,
+    prayer.id,
+    fields,
+    updateTransforms,
+    "No fue posible actualizar el estado de la petición.",
+  );
+}
+
+export async function hideGeneralPrayer(
+  idToken: string,
+  prayer: GeneralPrayer,
+) {
+  const fields = preservedFields(prayer);
+  delete fields.hiddenAt;
+
+  await commitGeneralPrayerUpdate(
+    idToken,
+    prayer.id,
+    fields,
+    [{
+      fieldPath: "hiddenAt",
+      setToServerValue: "REQUEST_TIME",
+    }],
+    "No fue posible ocultar la petición.",
+  );
 }

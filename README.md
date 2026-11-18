@@ -126,6 +126,9 @@ Después haz `git push`. El flujo de GitHub Actions incluirá la configuración 
 - El formulario solicita el nombre de la persona o tema, un texto opcional y la categoría **Petición** o **Iglesia en general**. Firebase registra automáticamente la fecha y hora del servidor.
 - Después de guardar, la persona puede limpiar el formulario para agregar otra petición o regresar al directorio.
 - Las peticiones recibidas por ese enlace se guardan en la colección `generalPrayers` y aparecen en la pestaña independiente **Peticiones generales** después de desbloquear el directorio.
+- La pestaña incluye un enlace directo para abrir el formulario público y un buscador por persona/tema, contenido, categoría, estado o fecha.
+- La consulta es pública después de desbloquear el directorio; para marcar **Cumplida**, **No cumplida**, limpiar el estado u ocultar una petición se requiere la sesión administrativa de Firebase.
+- Al cambiar un estado, Firebase registra automáticamente la fecha y hora. La opción de ocultar pide confirmación, conserva el documento y guarda `hiddenAt`; no realiza un borrado físico.
 - Los botones de oraciones solo aparecen cuando la información del directorio está desbloqueada.
 - Cada tarjeta con registros muestra **Ver oraciones (n)** sin solicitar la contraseña administrativa.
 - La pestaña **Todas las oraciones** reúne únicamente las peticiones de los miembros, agrupadas por nombre.

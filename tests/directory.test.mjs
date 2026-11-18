@@ -155,15 +155,51 @@ test("shows public requests in a separate general-prayers tab", async () => {
     new URL("../app/page.tsx", import.meta.url),
     "utf8",
   );
+  const generalView = await readFile(
+    new URL("../components/general-prayers-view.tsx", import.meta.url),
+    "utf8",
+  );
 
   assert.match(source, /type DirectoryView = "directory" \| "prayers" \| "general-prayers"/);
   assert.match(source, /id="general-prayers-tab"/);
   assert.match(source, /aria-controls="general-prayers-panel"/);
   assert.match(source, /activeView === "general-prayers"/);
-  assert.match(source, /Peticiones generales/);
-  assert.match(source, /Consulta las peticiones recibidas desde el enlace público/);
-  assert.match(source, /showingGeneral &&/);
-  assert.match(source, /!showingGeneral &&/);
+  assert.match(source, /<GeneralPrayersView/);
+  assert.match(generalView, /Peticiones generales/);
+  assert.match(generalView, /Consulta las peticiones recibidas desde el enlace público/);
+});
+
+test("manages general requests with search, statuses, and soft hiding", async () => {
+  const generalView = await readFile(
+    new URL("../components/general-prayers-view.tsx", import.meta.url),
+    "utf8",
+  );
+  const storage = await readFile(
+    new URL("../lib/general-prayers.ts", import.meta.url),
+    "utf8",
+  );
+  const rules = await readFile(
+    new URL("../firestore.rules", import.meta.url),
+    "utf8",
+  );
+  const generalPrayerRules = rules.match(
+    /match \/generalPrayers\/\{generalPrayerId\} \{[\s\S]*?\n    \}/,
+  )?.[0] ?? "";
+
+  assert.match(generalView, /href="\.\/nueva-peticion\/"/);
+  assert.match(generalView, /Buscar por tema, contenido o fecha/);
+  assert.match(generalView, /Cumplida/);
+  assert.match(generalView, /No cumplida/);
+  assert.match(generalView, /Limpiar estado/);
+  assert.match(generalView, /window\.confirm/);
+  assert.match(generalView, /No se borrará de Firebase/);
+  assert.match(generalView, /Administrar peticiones/);
+  assert.match(storage, /export async function updateGeneralPrayerStatus/);
+  assert.match(storage, /export async function hideGeneralPrayer/);
+  assert.match(storage, /fieldPath: "hiddenAt"/);
+  assert.match(storage, /prayer\.hiddenAt === null/);
+  assert.match(generalPrayerRules, /allow update:\s*if isPrayerAdmin\(\)/);
+  assert.match(generalPrayerRules, /allow delete:\s*if false/);
 });
 
 test("accepts suggestions publicly but protects the administrative inbox", async () => {
